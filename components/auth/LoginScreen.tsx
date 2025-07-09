@@ -1,16 +1,17 @@
-import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert} from 'react-native'
+import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import React, {useContext, useState} from 'react'
 import {AuthContext} from "@/context/AuthContext";
 import {Image} from "expo-image";
 import {LinearGradient} from "expo-linear-gradient";
 import RegisterScreen from './RegisterScreen';
 import PrivacyPolicy from './PrivacyPolicy';
+import ResetPasswordScreen from './ResetPasswordScreen';
 
 export default function LoginScreen() {
     const { login } = useContext(AuthContext);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [currentView, setCurrentView] = useState<'login' | 'register' | 'privacy' | 'terms'>('login');
+    const [currentView, setCurrentView] = useState<'login' | 'register' | 'privacy' | 'terms' | 'reset'>('login');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async () => {
@@ -37,6 +38,10 @@ export default function LoginScreen() {
         return <PrivacyPolicy onBack={() => setCurrentView('login')} />;
     }
 
+    if (currentView === 'reset') {
+        return <ResetPasswordScreen onBackToLogin={() => setCurrentView('login')} />;
+    }
+
 
     return (
         <LinearGradient
@@ -44,66 +49,80 @@ export default function LoginScreen() {
             locations={[0.3, 1]}
             style={styles.container}
         >
-            <View style={styles.contentContainer}>
-                <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardAvoidingView}
+            >
+                <ScrollView 
+                    contentContainerStyle={styles.scrollViewContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.contentContainer}>
+                        <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
 
-                <Text style={styles.title}>Witamy ponownie!</Text>
-                <Text style={styles.subtitle}>Zaloguj się do swojego konta</Text>
+                        <Text style={styles.title}>Witamy ponownie!</Text>
+                        <Text style={styles.subtitle}>Zaloguj się do swojego konta</Text>
 
-                <View style={styles.formContainer}>
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Email"
-                            placeholderTextColor="#666"
-                            value={username}
-                            onChangeText={setUsername}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            autoComplete="email"
-                        />
+                        <View style={styles.formContainer}>
+                            <View style={styles.inputContainer}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Email"
+                                    placeholderTextColor="#666"
+                                    value={username}
+                                    onChangeText={setUsername}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    autoComplete="email"
+                                />
+                            </View>
+
+                            <View style={styles.inputContainer}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Hasło"
+                                    placeholderTextColor="#666"
+                                    secureTextEntry
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    autoComplete="password"
+                                />
+                            </View>
+
+                            <TouchableOpacity 
+                                style={styles.forgotPasswordContainer}
+                                onPress={() => setCurrentView('reset')}
+                            >
+                                <Text style={styles.forgotPasswordText}>Zapomniałeś hasła?</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.loginButton, isLoading && styles.buttonDisabled]}
+                                onPress={handleLogin}
+                                disabled={isLoading}
+                            >
+                                <Text style={styles.loginButtonText}>
+                                    {isLoading ? 'Logowanie...' : 'Zaloguj się'}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <View style={styles.dividerContainer}>
+                                <View style={styles.divider} />
+                                <Text style={styles.dividerText}>lub</Text>
+                                <View style={styles.divider} />
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.registerButton}
+                                onPress={() => setCurrentView('register')}
+                            >
+                                <Text style={styles.registerButtonText}>Utwórz nowe konto</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Hasło"
-                            placeholderTextColor="#666"
-                            secureTextEntry
-                            value={password}
-                            onChangeText={setPassword}
-                            autoComplete="password"
-                        />
-                    </View>
-
-                    <TouchableOpacity style={styles.forgotPasswordContainer}>
-                        <Text style={styles.forgotPasswordText}>Zapomniałeś hasła?</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.loginButton, isLoading && styles.buttonDisabled]}
-                        onPress={handleLogin}
-                        disabled={isLoading}
-                    >
-                        <Text style={styles.loginButtonText}>
-                            {isLoading ? 'Logowanie...' : 'Zaloguj się'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.dividerContainer}>
-                        <View style={styles.divider} />
-                        <Text style={styles.dividerText}>lub</Text>
-                        <View style={styles.divider} />
-                    </View>
-
-                    <TouchableOpacity
-                        style={styles.registerButton}
-                        onPress={() => setCurrentView('register')}
-                    >
-                        <Text style={styles.registerButtonText}>Utwórz nowe konto</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </LinearGradient>
     )
 }
@@ -112,11 +131,18 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    keyboardAvoidingView: {
+        flex: 1,
+    },
+    scrollViewContent: {
+        flexGrow: 1,
+    },
     contentContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
+        paddingBottom: 40,
     },
     logo: {
         width: 200,
