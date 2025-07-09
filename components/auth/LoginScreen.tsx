@@ -1,4 +1,4 @@
-import {Button, StyleSheet, Text, TextInput, View, TouchableOpacity, Alert} from 'react-native'
+import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert} from 'react-native'
 import React, {useContext, useState} from 'react'
 import {AuthContext} from "@/context/AuthContext";
 import {Image} from "expo-image";
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     },
     loginButtonText: {
         color: '#ffc500',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
     },
     dividerContainer: {

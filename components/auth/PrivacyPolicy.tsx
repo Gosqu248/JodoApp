@@ -1,27 +1,48 @@
-import {StyleSheet, Text, View, TouchableOpacity, ScrollView} from 'react-native'
+import {StyleSheet, Text, View, TouchableOpacity, ScrollView, StatusBar} from 'react-native'
 import React from 'react'
 import {LinearGradient} from "expo-linear-gradient";
 import { Ionicons } from '@expo/vector-icons';
 
 interface PrivacyPolicyProps {
     onBack: () => void;
+    onViewTerms?: () => void;
 }
 
-export default function PrivacyPolicy({ onBack }: PrivacyPolicyProps) {
+export default function PrivacyPolicy({ onBack, onViewTerms }: PrivacyPolicyProps) {
     return (
         <LinearGradient
-            colors={['#000000', '#ffd500']}
-            locations={[0.2, 1]}
+            colors={['#1a1a1a', '#ffd700']}
+            locations={[0.1, 1]}
             style={styles.container}
         >
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={onBack}>
-                    <Ionicons name="arrow-back" size={24} color="#000" />
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Polityka Prywatności</Text>
             </View>
 
-            <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+            <TouchableOpacity 
+                style={styles.termsButton}
+                onPress={() => {
+                    if (onViewTerms) {
+                        onViewTerms();
+                    } else {
+                        // Fall back to onBack if onViewTerms is not provided
+                        onBack();
+                    }
+                }}
+            >
+                <Ionicons name="document-text-outline" size={20} color="#fff" />
+                <Text style={styles.termsButtonText}>Zobacz Regulamin</Text>
+            </TouchableOpacity>
+
+            <ScrollView 
+                style={styles.scrollContainer} 
+                contentContainerStyle={styles.scrollContentContainer}
+                showsVerticalScrollIndicator={false}
+            >
                 <View style={styles.content}>
                     <Text style={styles.lastUpdated}>
                         Ostatnia aktualizacja: {new Date().toLocaleDateString('pl-PL')}
@@ -117,60 +138,95 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         paddingBottom: 20,
     },
+    termsButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        borderRadius: 20,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        marginHorizontal: 24,
+        marginBottom: 16,
+        alignSelf: 'flex-start',
+    },
+    termsButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        marginLeft: 8,
+        fontSize: 14,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
+    },
     backButton: {
         padding: 8,
         marginRight: 16,
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        borderRadius: 20,
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: 'bold',
-        color: '#000',
+        color: '#fff',
         flex: 1,
+        textShadowColor: 'rgba(0, 0, 0, 0.3)',
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 3,
     },
     scrollContainer: {
         flex: 1,
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
+    },
+    scrollContentContainer: {
+        paddingBottom: 30,
     },
     content: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: 16,
-        padding: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.97)',
+        borderRadius: 20,
+        padding: 24,
         marginBottom: 24,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: 4,
         },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 10,
     },
     lastUpdated: {
-        fontSize: 12,
-        color: '#666',
+        fontSize: 13,
+        color: '#555',
         fontStyle: 'italic',
-        marginBottom: 20,
+        marginBottom: 24,
         textAlign: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        paddingBottom: 12,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 19,
         fontWeight: 'bold',
-        color: '#000',
-        marginTop: 20,
-        marginBottom: 12,
+        color: '#222',
+        marginTop: 24,
+        marginBottom: 14,
+        borderLeftWidth: 3,
+        borderLeftColor: '#ffd700',
+        paddingLeft: 10,
     },
     paragraph: {
-        fontSize: 14,
+        fontSize: 15,
         color: '#333',
-        lineHeight: 22,
-        marginBottom: 12,
+        lineHeight: 24,
+        marginBottom: 14,
         textAlign: 'justify',
+        letterSpacing: 0.2,
     },
     bulletPoint: {
-        fontSize: 14,
+        fontSize: 15,
         color: '#333',
-        lineHeight: 20,
-        marginBottom: 6,
-        paddingLeft: 10,
+        lineHeight: 22,
+        marginBottom: 8,
+        paddingLeft: 16,
     },
 });

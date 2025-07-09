@@ -1,10 +1,10 @@
-
 import {Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native'
 import React, {useState} from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 import {Ionicons} from "@expo/vector-icons";
 import {Image} from "expo-image";
 import PrivacyPolicy from './PrivacyPolicy';
+import Terms from './Terms';
 
 interface RegisterScreenProps {
     onBackToLogin: () => void;
@@ -59,7 +59,6 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
         try {
             console.log('Rejestracja:', { firstName, lastName, email, password });
 
-            // Symulacja API call
             await new Promise(resolve => setTimeout(resolve, 1500));
 
             Alert.alert(
@@ -75,13 +74,17 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
     };
 
     if (currentView === 'privacy') {
-        return <PrivacyPolicy onBack={() => setCurrentView('register')} />;
+        return <PrivacyPolicy 
+            onBack={() => setCurrentView('register')} 
+            onViewTerms={() => setCurrentView('terms')}
+        />;
     }
 
     if (currentView === 'terms') {
-        // Tutaj powinien być komponent z regulaminem
-        // Na potrzeby tego zadania wracamy do ekranu rejestracji
-        return <PrivacyPolicy onBack={() => setCurrentView('register')} />;
+        return <Terms 
+            onBack={() => setCurrentView('register')} 
+            onViewPrivacy={() => setCurrentView('privacy')}
+        />;
     }
 
     return (
@@ -90,13 +93,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
             locations={[0.3, 1]}
             style={styles.container}
         >
-
             <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-                <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={onBackToLogin}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                </View>
                 <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
 
                 <Text style={styles.title}>Utwórz konto</Text>
@@ -214,23 +211,14 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         padding: 24,
+        paddingTop: 50,
         paddingBottom: 120,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    backButton: {
-        position: 'absolute',
-        left: 0,
-        zIndex: 1,
-        padding: 8,
     },
     logo: {
         width: 150,
         height: 150,
         alignSelf: 'center',
-        flex: 1,
+        marginBottom: 20,
     },
     title: {
         fontSize: 28,
@@ -327,12 +315,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loginText: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#f0f0f0',
     },
     loginLink: {
-        fontSize: 14,
-        color: '#ffc500',
+        fontSize: 18,
+        color: '#000000',
         fontWeight: 'bold',
         textDecorationLine: 'underline',
     },
