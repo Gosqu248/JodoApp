@@ -1,4 +1,4 @@
-import {Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native'
+import {Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform} from 'react-native'
 import React, {useState} from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 import {Ionicons} from "@expo/vector-icons";
@@ -93,118 +93,130 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
             locations={[0.3, 1]}
             style={styles.container}
         >
-            <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-                <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardAvoidingView}
+            >
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContainer} 
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
 
-                <Text style={styles.title}>Utwórz konto</Text>
-                <Text style={styles.subtitle}>Dołącz do nas już dziś!</Text>
+                    <Text style={styles.title}>Utwórz konto</Text>
+                    <Text style={styles.subtitle}>Dołącz do nas już dziś!</Text>
 
-                <View style={styles.formContainer}>
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Imię"
-                            placeholderTextColor="#666"
-                            value={firstName}
-                            onChangeText={setFirstName}
-                            autoCapitalize="words"
-                            autoComplete="given-name"
-                        />
-                    </View>
-
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Nazwisko"
-                            placeholderTextColor="#666"
-                            value={lastName}
-                            onChangeText={setLastName}
-                            autoCapitalize="words"
-                            autoComplete="family-name"
-                        />
-                    </View>
-
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Email"
-                            placeholderTextColor="#666"
-                            value={email}
-                            onChangeText={setEmail}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            autoComplete="email"
-                        />
-                    </View>
-
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Hasło"
-                            placeholderTextColor="#666"
-                            secureTextEntry
-                            value={password}
-                            onChangeText={setPassword}
-                            autoComplete="new-password"
-                        />
-                    </View>
-
-                    <View style={styles.inputContainer}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Potwierdź hasło"
-                            placeholderTextColor="#666"
-                            secureTextEntry
-                            value={confirmPassword}
-                            onChangeText={setConfirmPassword}
-                            autoComplete="new-password"
-                        />
-                    </View>
-
-                    <TouchableOpacity
-                        style={styles.checkboxContainer}
-                        onPress={() => setAcceptTerms(!acceptTerms)}
-                    >
-                        <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
-                            {acceptTerms && <Ionicons name="checkmark" size={16} color="#ffc500" />}
+                    <View style={styles.formContainer}>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Imię"
+                                placeholderTextColor="#666"
+                                value={firstName}
+                                onChangeText={setFirstName}
+                                autoCapitalize="words"
+                                autoComplete="given-name"
+                            />
                         </View>
-                        <Text style={styles.checkboxText}>
-                            Akceptuję{' '}
-                            <Text
-                                style={styles.linkText}
-                                onPress={() => setCurrentView('terms')}
-                            >Regulamin</Text>
-                            {' '}i{' '}
-                            <Text
-                                style={styles.linkText}
-                                onPress={() => setCurrentView('privacy')}
-                            >Politykę Prywatności</Text>
-                        </Text>
-                    </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.registerButton, isLoading && styles.buttonDisabled]}
-                        onPress={handleRegister}
-                        disabled={isLoading}
-                    >
-                        <Text style={styles.registerButtonText}>
-                            {isLoading ? 'Tworzenie konta...' : 'Zarejestruj się'}
-                        </Text>
-                    </TouchableOpacity>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Nazwisko"
+                                placeholderTextColor="#666"
+                                value={lastName}
+                                onChangeText={setLastName}
+                                autoCapitalize="words"
+                                autoComplete="family-name"
+                            />
+                        </View>
 
-                    <View style={styles.loginContainer}>
-                        <Text style={styles.loginText}>Masz już konto? </Text>
-                        <TouchableOpacity onPress={onBackToLogin}>
-                            <Text style={styles.loginLink}>Zaloguj się</Text>
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Email"
+                                placeholderTextColor="#666"
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                autoComplete="email"
+                            />
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Hasło"
+                                placeholderTextColor="#666"
+                                secureTextEntry
+                                value={password}
+                                onChangeText={setPassword}
+                                autoComplete="new-password"
+                            />
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Potwierdź hasło"
+                                placeholderTextColor="#666"
+                                secureTextEntry
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                                autoComplete="new-password"
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.checkboxContainer}
+                            onPress={() => setAcceptTerms(!acceptTerms)}
+                        >
+                            <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+                                {acceptTerms && <Ionicons name="checkmark" size={16} color="#ffc500" />}
+                            </View>
+                            <Text style={styles.checkboxText}>
+                                Akceptuję{' '}
+                                <Text
+                                    style={styles.linkText}
+                                    onPress={() => setCurrentView('terms')}
+                                >Regulamin</Text>
+                                {' '}i{' '}
+                                <Text
+                                    style={styles.linkText}
+                                    onPress={() => setCurrentView('privacy')}
+                                >Politykę Prywatności</Text>
+                            </Text>
                         </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.registerButton, isLoading && styles.buttonDisabled]}
+                            onPress={handleRegister}
+                            disabled={isLoading}
+                        >
+                            <Text style={styles.registerButtonText}>
+                                {isLoading ? 'Tworzenie konta...' : 'Zarejestruj się'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.loginContainer}>
+                            <Text style={styles.loginText}>Masz już konto? </Text>
+                            <TouchableOpacity onPress={onBackToLogin}>
+                                <Text style={styles.loginLink}>Zaloguj się</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </LinearGradient>
     )
 }
 const styles = StyleSheet.create({
     container: {
+        flex: 1,
+    },
+    keyboardAvoidingView: {
         flex: 1,
     },
     scrollContainer: {
