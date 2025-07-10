@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, {useContext, useEffect, useState} from 'react';
 import {
     StyleSheet,
     Text,
@@ -14,13 +14,33 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
 
+
 export default function UserProfileScreen() {
     const { user, logout } = useContext(AuthContext);
     const { userInfo, loading: userLoading } = useUser();
+    const [photoUri, setPhotoUri] = useState<string | null>(null);
+    const [photoLoading, setPhotoLoading] = useState(true);
 
-    if (userLoading) return <ActivityIndicator />;
-    if (!userInfo)  return null;
-    if (!user) return null;
+    const apiBaseUrl = 'http://192.168.0.30:8080/api';
+
+    useEffect(() => {
+        if (userInfo?.id) {
+            const uri = `${apiBaseUrl}/user/${userInfo.id}/photo`;
+            // Optionally test fetch staxtus
+            fetch(uri)
+                .then(res => {
+                    if (res.ok) {
+                        setPhotoUri(uri);
+                    } else {
+                        setPhotoUri(null);
+                    }
+                })
+                .finally(() => setPhotoLoading(false));
+        }
+    }, [userInfo]);
+
+    if (userLoading || photoLoading) return <ActivityIndicator />;
+    if (!userInfo || !user) return null;
 
     const membershipExpiryDate = new Date('2025-12-31');
     const currentDate = new Date();
@@ -60,12 +80,21 @@ export default function UserProfileScreen() {
 
                     {/* Awatar */}
                     <View style={styles.avatarContainer}>
-                        <Image
-                            source={require('@/assets/images/Jodo.png')}
-                            style={styles.avatar}
-                            contentFit="cover"
-                        />
+                        {photoUri ? (
+                            <Image
+                                source={{ uri: photoUri }}
+                                style={styles.avatar}
+                                contentFit="cover"
+                            />
+                        ) : (
+                            <Image
+                                source={require('@/assets/images/Jodo.png')}
+                                style={styles.avatar}
+                                contentFit="cover"
+                            />
+                        )}
                     </View>
+
 
                     {/* Imię i nazwisko wyśrodkowane */}
                     <View style={styles.nameContainerCenter}>
@@ -200,7 +229,7 @@ const styles = StyleSheet.create({
     avatar: {
         width: 140,
         height: 140,
-        borderRadius: 70
+        borderRadius: 20
     },
     nameContainerCenter: {
         alignItems: 'center'

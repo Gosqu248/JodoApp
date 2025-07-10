@@ -11,6 +11,7 @@ import {
     UpdateUserInfoParams
 } from '@/api/user';
 import { UserInfo } from '@/types/UserInfo';
+import { useAuth } from './AuthContext';
 
 interface UserContextValue {
     userInfo: UserInfo | null;
@@ -33,6 +34,7 @@ interface UserProviderProps {
 export const UserProvider = ({ children }: UserProviderProps) => {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
 
     const refreshUserInfo = async () => {
         setLoading(true);
@@ -55,8 +57,13 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     };
 
     useEffect(() => {
-        refreshUserInfo();
-    }, []);
+        if (user) {
+            refreshUserInfo();
+        } else {
+            setUserInfo(null);
+            setLoading(false);
+        }
+    }, [user]);
 
     return (
         <UserContext.Provider

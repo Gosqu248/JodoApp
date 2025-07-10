@@ -6,12 +6,18 @@ const apiBaseUrl = 'http://192.168.0.30:8080/api';
 
 export const publicApi = axios.create({
     baseURL: apiBaseUrl,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    },
 });
 
 export const privateApi = axios.create({
     baseURL: apiBaseUrl,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    },
 });
 
 privateApi.interceptors.request.use(async config => {

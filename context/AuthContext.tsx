@@ -34,6 +34,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
             const authResponse: AuthResponse = await doLogin({ email, password });
             setUser(authResponse.user);
+        } catch (error) {
+            console.error('Login failed:', error);
+            throw error;
         } finally {
             setLoading(false);
         }
@@ -57,12 +60,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         (async () => {
             const storedUser = await SecureStore.getItemAsync('user');
             const storedRefresh = await SecureStore.getItemAsync('refreshToken');
+
             if (storedRefresh) {
                 try {
                     setLoading(true);
+                    console.log('Attempting token refresh...');
                     await doRefreshToken();
                     if (storedUser) setUser(JSON.parse(storedUser));
-                } catch {
+                    console.log('Token refresh successful');
+                } catch (error) {
+                    console.error('Token refresh failed:', error);
                     await doLogout();
                     setUser(null);
                 } finally {
