@@ -1,11 +1,10 @@
-/* app/(tabs)/auth.tsx */
 import React, { useContext } from 'react';
 import { AuthContext } from '@/context/AuthContext';
 
 import LoginScreen from '@/components/auth/LoginScreen';
-import HomeContent from '@/components/auth/index.original';
+import UserProfile from '@/components/user/UserProfileScreen';
 
 export default function HomeScreen() {
-    const { isLoggedIn } = useContext(AuthContext);
-    return isLoggedIn ? <HomeContent /> : <LoginScreen />;
+    const { user } = useContext(AuthContext);
+    return user ? <UserProfile /> : <LoginScreen />;
 }

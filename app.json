@@ -6,13 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/images/JodoBG.webp",
     "scheme": "jodoapp",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
     "ios": {
       "supportsTablet": true
     },

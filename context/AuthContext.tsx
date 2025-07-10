@@ -1,57 +1,68 @@
-import React, {createContext, ReactNode, useState} from 'react'
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { login as doLogin, register as doRegister, logout as doLogout } from '@/api/auth';
+import { User } from '@/types/User';
 
 interface AuthContextValue {
-    isLoggedIn: boolean;
-    login: (username: string, password: string) => void;
-    register: (username: string, password: string) => Promise<boolean>;
-    resetPassword: (email: string) => Promise<boolean>;
-    logout: () => void;
+    user: User | null;
+    loading: boolean;
+    login: (email: string, password: string) => Promise<void>;
+    register: (firstName: string, lastName: string, email: string, password: string) => Promise<boolean>;
+    logout: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
-    isLoggedIn: false,
-    login: () => {},
+    user: null,
+    loading: false,
+    login: async () => {},
     register: async () => false,
-    resetPassword: async () => false,
-    logout: () => {}
+    logout: async () => {}
 });
 
 interface AuthProviderProps {
     children: ReactNode;
 }
 
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
-export const AuthProvider = ({children}: AuthProviderProps) => {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-    const login = (username: string, password: string) => {
-        setIsLoggedIn(true);
+    const login = async (email: string, password: string) => {
+        setLoading(true);
+        try {
+            const loggedUser = await doLogin({ email, password });
+            setUser(loggedUser);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const register = async (username: string, password: string): Promise<boolean> => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                console.log(`Registered user: ${username}`);
-                resolve(true);
-            }, 1000);
-        });
+    const register = async (firstName: string, lastName: string, email: string, password: string) => {
+        try {
+            await doRegister({ firstName, lastName, email, password });
+            return true;
+        } catch {
+            return false;
+        }
     };
 
-    const resetPassword = async (email: string): Promise<boolean> => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                console.log(`Password reset requested for: ${email}`);
-                resolve(true);
-            }, 1000);
-        });
+    const logout = async () => {
+        await doLogout();
+        setUser(null);
     };
 
-    const logout = () => {
-        setIsLoggedIn(false);
-    };
+    useEffect(() => {
+        (async () => {
+            const storedUser = await SecureStore.getItemAsync('user');
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
+            setLoading(false);
+        })();
+    }, []);
 
     return (
-        <AuthContext.Provider value={{isLoggedIn, login, register, resetPassword, logout}}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
             {children}
         </AuthContext.Provider>
     );

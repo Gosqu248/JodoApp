@@ -1,16 +1,19 @@
 import {Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform} from 'react-native'
-import React, {useState} from 'react'
+import React, {useState, useContext} from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 import {Ionicons} from "@expo/vector-icons";
 import {Image} from "expo-image";
 import PrivacyPolicy from './PrivacyPolicy';
 import Terms from './Terms';
+import {AuthContext} from "@/context/AuthContext";
 
 interface RegisterScreenProps {
     onBackToLogin: () => void;
 }
 
 export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
+    const { register } = useContext(AuthContext);
+
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -57,15 +60,16 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
 
         setIsLoading(true);
         try {
-            console.log('Rejestracja:', { firstName, lastName, email, password });
-
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            Alert.alert(
-                'Sukces!',
-                'Konto zostało utworzone pomyślnie. Możesz się teraz zalogować.',
-                [{ text: 'OK', onPress: onBackToLogin }]
-            );
+            const success = await register(firstName, lastName, email, password);
+            if (success) {
+                Alert.alert(
+                    'Sukces!',
+                    'Konto zostało utworzone pomyślnie. Możesz się teraz zalogować.',
+                    [{ text: 'OK', onPress: onBackToLogin }]
+                );
+            } else {
+                Alert.alert('Błąd', 'Rejestracja nie powiodła się. Spróbuj ponownie.');
+            }
         } catch (error) {
             Alert.alert('Błąd', 'Wystąpił błąd podczas rejestracji');
         } finally {
