@@ -8,7 +8,6 @@ export const publicApi = axios.create({
     baseURL: apiBaseUrl,
     headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
     },
 });
 
@@ -16,13 +15,19 @@ export const privateApi = axios.create({
     baseURL: apiBaseUrl,
     headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
     },
 });
 
 privateApi.interceptors.request.use(async config => {
     const token = await SecureStore.getItemAsync('accessToken');
-    if (token) config.headers!['Authorization'] = `Bearer ${token}`;
+    if (token) {
+        config.headers!['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (config.data instanceof FormData) {
+        delete config.headers!['Content-Type'];
+    }
+
     return config;
 });
 
@@ -36,8 +41,9 @@ privateApi.interceptors.response.use(
                 const newToken = await apiRefreshToken();
                 original.headers['Authorization'] = `Bearer ${newToken}`;
                 return privateApi(original);
-            } catch {
+            } catch (refreshError) {
                 await apiLogout();
+                return Promise.reject(refreshError);
             }
         }
         return Promise.reject(error);

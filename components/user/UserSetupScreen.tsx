@@ -41,7 +41,7 @@ export default function UserSetupScreen() {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],            // zamiast MediaTypeOptions :contentReference[oaicite:1]{index=1}
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [1, 1],
             quality: 1,

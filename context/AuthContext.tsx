@@ -11,6 +11,7 @@ interface AuthContextValue {
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string) => Promise<boolean>;
     logout: () => Promise<void>;
+    completeFirstLogin: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
@@ -18,7 +19,8 @@ export const AuthContext = createContext<AuthContextValue>({
     loading: false,
     login: async () => {},
     register: async () => false,
-    logout: async () => {}
+    logout: async () => {},
+    completeFirstLogin: async () => {}
 });
 
 interface AuthProviderProps {
@@ -29,14 +31,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const completeFirstLogin = async () => {
+        if (!user) return;
+        const updatedUser: User = { ...user, isFirstLogin: false };
+        setUser(updatedUser);
+        await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
+    };
+
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
             const authResponse: AuthResponse = await doLogin({ email, password });
             setUser(authResponse.user);
         } catch (error) {
+            await doLogout();
             console.error('Login failed:', error);
-            throw error;
         } finally {
             setLoading(false);
         }
@@ -83,7 +92,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }, []);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, completeFirstLogin }}>
             {children}
         </AuthContext.Provider>
     );
