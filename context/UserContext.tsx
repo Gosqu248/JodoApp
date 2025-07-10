@@ -34,7 +34,7 @@ interface UserProviderProps {
 export const UserProvider = ({ children }: UserProviderProps) => {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
+    const { user, completeFirstLogin } = useAuth();
 
     const refreshUserInfo = async () => {
         setLoading(true);
@@ -51,13 +51,14 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         try {
             const updated = await apiUpdateUserInfo(params);
             setUserInfo(updated);
+            await completeFirstLogin();
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        if (user) {
+        if (!user?.isFirstLogin) {
             refreshUserInfo();
         } else {
             setUserInfo(null);

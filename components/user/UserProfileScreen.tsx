@@ -13,7 +13,7 @@ import { AuthContext } from '@/context/AuthContext';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
-
+import { getUserPhoto } from '@/api/user';
 
 export default function UserProfileScreen() {
     const { user, logout } = useContext(AuthContext);
@@ -21,22 +21,17 @@ export default function UserProfileScreen() {
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(true);
 
-    const apiBaseUrl = 'http://192.168.0.30:8080/api';
 
     useEffect(() => {
-        if (userInfo?.id) {
-            const uri = `${apiBaseUrl}/user/${userInfo.id}/photo`;
-            // Optionally test fetch staxtus
-            fetch(uri)
-                .then(res => {
-                    if (res.ok) {
-                        setPhotoUri(uri);
-                    } else {
-                        setPhotoUri(null);
-                    }
-                })
-                .finally(() => setPhotoLoading(false));
-        }
+        const fetchPhoto = async () => {
+            if (userInfo?.id) {
+                setPhotoLoading(true);
+                const uri = await getUserPhoto(userInfo.id);
+                setPhotoUri(uri);
+                setPhotoLoading(false);
+            }
+        };
+        fetchPhoto();
     }, [userInfo]);
 
     if (userLoading || photoLoading) return <ActivityIndicator />;
@@ -86,13 +81,7 @@ export default function UserProfileScreen() {
                                 style={styles.avatar}
                                 contentFit="cover"
                             />
-                        ) : (
-                            <Image
-                                source={require('@/assets/images/Jodo.png')}
-                                style={styles.avatar}
-                                contentFit="cover"
-                            />
-                        )}
+                        ) : (<></>)}
                     </View>
 
 
