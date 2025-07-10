@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import {AuthProvider} from "@/context/AuthContext";
+import {UserProvider} from "@/context/UserContext";
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -17,13 +18,15 @@ export default function RootLayout() {
 
   return (
       <AuthProvider>
-          <ThemeProvider value={DefaultTheme}>
-              <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="+not-found" />
-              </Stack>
-              <StatusBar style="auto" />
-          </ThemeProvider>
+          <UserProvider>
+              <ThemeProvider value={DefaultTheme}>
+                  <Stack>
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="+not-found" />
+                  </Stack>
+                  <StatusBar style="auto" />
+              </ThemeProvider>
+          </UserProvider>
       </AuthProvider>
 
   );
