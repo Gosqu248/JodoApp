@@ -14,8 +14,6 @@ interface RegisterScreenProps {
 export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
     const { register } = useContext(AuthContext);
 
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,14 +22,6 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
     const [currentView, setCurrentView] = useState<'register' | 'privacy' | 'terms'>('register');
 
     const validateForm = () => {
-        if (!firstName.trim()) {
-            Alert.alert('Błąd', 'Proszę podać imię');
-            return false;
-        }
-        if (!lastName.trim()) {
-            Alert.alert('Błąd', 'Proszę podać nazwisko');
-            return false;
-        }
         if (!email.trim()) {
             Alert.alert('Błąd', 'Proszę podać email');
             return false;
@@ -60,7 +50,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
 
         setIsLoading(true);
         try {
-            const success = await register(firstName, lastName, email, password);
+            const success = await register(email, password);
             if (success) {
                 Alert.alert(
                     'Sukces!',
@@ -112,30 +102,6 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                     <Text style={styles.subtitle}>Dołącz do nas już dziś!</Text>
 
                     <View style={styles.formContainer}>
-                        <View style={styles.inputContainer}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Imię"
-                                placeholderTextColor="#666"
-                                value={firstName}
-                                onChangeText={setFirstName}
-                                autoCapitalize="words"
-                                autoComplete="given-name"
-                            />
-                        </View>
-
-                        <View style={styles.inputContainer}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Nazwisko"
-                                placeholderTextColor="#666"
-                                value={lastName}
-                                onChangeText={setLastName}
-                                autoCapitalize="words"
-                                autoComplete="family-name"
-                            />
-                        </View>
-
                         <View style={styles.inputContainer}>
                             <TextInput
                                 style={styles.input}

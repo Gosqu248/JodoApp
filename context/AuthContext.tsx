@@ -1,13 +1,15 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import React, {createContext, useState, useEffect, ReactNode, useContext} from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { login as doLogin, register as doRegister, logout as doLogout } from '@/api/auth';
 import { User } from '@/types/User';
+import {AuthResponse} from "@/types/AuthResponse";
+import { login as doLogin, register as doRegister, logout as doLogout, refreshToken as doRefreshToken } from '@/api/auth';
+
 
 interface AuthContextValue {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (firstName: string, lastName: string, email: string, password: string) => Promise<boolean>;
+    register: (email: string, password: string) => Promise<boolean>;
     logout: () => Promise<void>;
 }
 
@@ -30,16 +32,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
-            const loggedUser = await doLogin({ email, password });
-            setUser(loggedUser);
+            const authResponse: AuthResponse = await doLogin({ email, password });
+            setUser(authResponse.user);
         } finally {
             setLoading(false);
         }
     };
 
-    const register = async (firstName: string, lastName: string, email: string, password: string) => {
+    const register = async (email: string, password: string) => {
         try {
-            await doRegister({ firstName, lastName, email, password });
+            await doRegister({ email, password });
             return true;
         } catch {
             return false;
@@ -54,10 +56,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     useEffect(() => {
         (async () => {
             const storedUser = await SecureStore.getItemAsync('user');
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
+            const storedRefresh = await SecureStore.getItemAsync('refreshToken');
+            if (storedRefresh) {
+                try {
+                    setLoading(true);
+                    await doRefreshToken();
+                    if (storedUser) setUser(JSON.parse(storedUser));
+                } catch {
+                    await doLogout();
+                    setUser(null);
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                if (storedUser) setUser(JSON.parse(storedUser));
+                setLoading(false);
             }
-            setLoading(false);
         })();
     }, []);
 
@@ -67,3 +81,4 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         </AuthContext.Provider>
     );
 };
+export const useAuth = () => useContext(AuthContext);

@@ -6,18 +6,21 @@ import {
     TouchableOpacity,
     ScrollView,
     SafeAreaView,
-    StatusBar
+    StatusBar,
+    ActivityIndicator
 } from 'react-native';
 import { AuthContext } from '@/context/AuthContext';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '@/context/UserContext';
 
 export default function UserProfileScreen() {
     const { user, logout } = useContext(AuthContext);
+    const { userInfo, loading: userLoading } = useUser();
 
-    if (!user) {
-        return null;
-    }
+    if (userLoading) return <ActivityIndicator />;
+    if (!userInfo)  return null;
+    if (!user) return null;
 
     const membershipExpiryDate = new Date('2025-12-31');
     const currentDate = new Date();
@@ -66,8 +69,8 @@ export default function UserProfileScreen() {
 
                     {/* Imię i nazwisko wyśrodkowane */}
                     <View style={styles.nameContainerCenter}>
-                        <Text style={styles.firstName}>{user.userInfo.firstName}</Text>
-                        <Text style={styles.lastName}>{user.userInfo.lastName}</Text>
+                        <Text style={styles.firstName}>{userInfo.firstName}</Text>
+                        <Text style={styles.lastName}>{userInfo.lastName}</Text>
                     </View>
                 </View>
 
@@ -121,7 +124,7 @@ export default function UserProfileScreen() {
                             <View style={styles.infoContent}>
                                 <Text style={styles.infoLabel}>Data urodzenia</Text>
                                 <Text style={styles.infoValue}>
-                                    {formatDate(new Date(user.userInfo.birthDate))}
+                                    {formatDate(new Date(userInfo.birthDate))}
                                 </Text>
                             </View>
                         </View>
@@ -131,7 +134,7 @@ export default function UserProfileScreen() {
                             <View style={styles.infoContent}>
                                 <Text style={styles.infoLabel}>Członek od</Text>
                                 <Text style={styles.infoValue}>
-                                    {formatDate(new Date(user.userInfo.createdDate))}
+                                    {formatDate(new Date(userInfo.createdDate))}
                                 </Text>
                             </View>
                         </View>

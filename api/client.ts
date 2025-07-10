@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from "expo-secure-store";
+import { refreshToken as apiRefreshToken, logout as apiLogout } from '@/api/auth';
 
 const apiBaseUrl = 'http://192.168.0.30:8080/api';
 
@@ -20,17 +21,17 @@ privateApi.interceptors.request.use(async config => {
 });
 
 privateApi.interceptors.response.use(
-    response => response,
+    resp => resp,
     async error => {
-        const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
+        const original = error.config;
+        if (error.response?.status === 401 && !original._retry) {
+            original._retry = true;
             try {
-                const newToken = await refreshToken();
-                originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-                return privateApi(originalRequest);
-            } catch (e) {
-                await logout();
+                const newToken = await apiRefreshToken();
+                original.headers['Authorization'] = `Bearer ${newToken}`;
+                return privateApi(original);
+            } catch {
+                await apiLogout();
             }
         }
         return Promise.reject(error);
