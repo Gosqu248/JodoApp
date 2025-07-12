@@ -13,13 +13,16 @@ import { AuthContext } from '@/context/AuthContext';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
-
+import { getMembership } from '@/api/membership';
+import { Membership } from '@/types/Membership';
 
 export default function UserProfileScreen() {
     const { user, logout } = useContext(AuthContext);
     const { userInfo, loading: userLoading } = useUser();
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(true);
+    const [membership, setMembership] = useState<Membership | null>(null);
+    const [membershipLoading, setMembershipLoading] = useState(true);
 
     const apiBaseUrl = 'http://192.168.0.30:8080/api';
 
@@ -38,15 +41,33 @@ export default function UserProfileScreen() {
         }
     }, [userInfo]);
 
-    if (userLoading || photoLoading) return <ActivityIndicator />;
+    useEffect(() => {
+        const fetchMembership = async () => {
+            if (userInfo?.id) {
+                try {
+                    setMembershipLoading(true);
+                    const membershipData = await getMembership(user.id);
+                    setMembership(membershipData);
+                } catch (error) {
+                    console.error('Błąd przy pobieraniu danych membership:', error);
+                    setMembership(null);
+                } finally {
+                    setMembershipLoading(false);
+                }
+            }
+        };
+
+        fetchMembership();
+    }, [userInfo]);
+
+    if (userLoading || photoLoading || membershipLoading) return <ActivityIndicator />;
     if (!userInfo || !user) return null;
 
-    const membershipExpiryDate = new Date('2025-12-31');
+    const membershipExpiryDate = membership?.expiryDate ? new Date(membership.expiryDate) : null;
     const currentDate = new Date();
-    const isActive = membershipExpiryDate > currentDate;
-    const daysLeft = Math.ceil(
-        (membershipExpiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const isActive = membership ? membership.isActive : false;
+    const daysLeft = membershipExpiryDate ?
+        Math.ceil((membershipExpiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
     const formatDate = (date: Date) =>
         date.toLocaleDateString('pl-PL', {
@@ -94,7 +115,6 @@ export default function UserProfileScreen() {
                         )}
                     </View>
 
-
                     {/* Imię i nazwisko wyśrodkowane */}
                     <View style={styles.nameContainerCenter}>
                         <Text style={styles.firstName}>{userInfo.firstName}</Text>
@@ -105,34 +125,47 @@ export default function UserProfileScreen() {
                 {/* Sekcja ważności karnetu */}
                 <View style={styles.membershipSection}>
                     <Text style={styles.sectionTitle}>Status karnetu</Text>
-                    <View style={styles.membershipCard}>
-                        <View style={styles.membershipInfo}>
-                            <Text style={styles.membershipLabel}>Ważność do:</Text>
-                            <Text style={styles.membershipDate}>
-                                {formatDate(membershipExpiryDate)}
-                            </Text>
-                            {isActive && (
-                                <Text style={styles.daysLeftText}>
-                                    Pozostało {daysLeft} dni
+                    {membership ? (
+                        <View style={styles.membershipCard}>
+                            <View style={styles.membershipInfo}>
+                                <Text style={styles.membershipLabel}>Ważność do:</Text>
+                                <Text style={styles.membershipDate}>
+                                    {membershipExpiryDate ? formatDate(membershipExpiryDate) : 'Brak danych'}
                                 </Text>
-                            )}
+                                {isActive && daysLeft > 0 && (
+                                    <Text style={styles.daysLeftText}>
+                                        Pozostało {daysLeft} dni
+                                    </Text>
+                                )}
+                                {membership.isFrozen && (
+                                    <Text style={styles.frozenText}>
+                                        Karnet jest zamrożony
+                                    </Text>
+                                )}
+                            </View>
+                            <View
+                                style={[
+                                    styles.statusButton,
+                                    { backgroundColor: isActive ? '#4CAF50' : '#F44336' }
+                                ]}
+                            >
+                                <Ionicons
+                                    name={isActive ? 'checkmark-circle' : 'close-circle'}
+                                    size={20}
+                                    color="#fff"
+                                />
+                                <Text style={styles.statusText}>
+                                    {isActive ? 'Aktywny' : 'Nieaktywny'}
+                                </Text>
+                            </View>
                         </View>
-                        <View
-                            style={[
-                                styles.statusButton,
-                                { backgroundColor: isActive ? '#4CAF50' : '#F44336' }
-                            ]}
-                        >
-                            <Ionicons
-                                name={isActive ? 'checkmark-circle' : 'close-circle'}
-                                size={20}
-                                color="#fff"
-                            />
-                            <Text style={styles.statusText}>
-                                {isActive ? 'Aktywny' : 'Nieaktywny'}
+                    ) : (
+                        <View style={styles.membershipCard}>
+                            <Text style={styles.noMembershipText}>
+                                Brak danych o karnecie
                             </Text>
                         </View>
-                    </View>
+                    )}
                 </View>
 
                 {/* Sekcja informacji osobistych */}
@@ -264,8 +297,10 @@ const styles = StyleSheet.create({
     membershipLabel: { fontSize: 16, color: '#666', marginBottom: 5 },
     membershipDate: { fontSize: 20, fontWeight: 'bold', color: '#000', marginBottom: 3 },
     daysLeftText: { fontSize: 14, color: '#ffc500', fontWeight: '600' },
+    frozenText: { fontSize: 14, color: '#FF9800', fontWeight: '600', marginTop: 3 },
     statusButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginLeft: 15 },
     statusText: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginLeft: 5 },
+    noMembershipText: { fontSize: 16, color: '#666', textAlign: 'center', flex: 1 },
     personalInfoSection: { marginBottom: 30 },
     infoCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, borderWidth: 2, borderColor: '#ffc500', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
     infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
