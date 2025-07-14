@@ -1,7 +1,5 @@
 import { privateApi } from '@/api/client';
-import { publicApi } from '@/api/client';
 import { UserInfo } from '@/types/UserInfo';
-import { Buffer } from 'buffer';
 
 export type UpdateUserInfoParams = {
     firstName: string;

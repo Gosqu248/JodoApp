@@ -1,8 +1,9 @@
 import axios from 'axios';
 import * as SecureStore from "expo-secure-store";
 import { refreshToken as apiRefreshToken, logout as apiLogout } from '@/api/auth';
+import { apiUrl } from '@/api/apiUrl';
 
-const apiBaseUrl = 'http://192.168.0.30:8080/api';
+const apiBaseUrl = apiUrl;
 
 export const publicApi = axios.create({
     baseURL: apiBaseUrl,

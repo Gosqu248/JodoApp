@@ -141,6 +141,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.12,
         shadowRadius: 24,
         elevation: 8,
+        borderWidth: 1,
+        borderColor: '#d0d2d5',
     },
     headerGradient: {height: 50, justifyContent: 'center', paddingHorizontal: 20},
     headerContent: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
@@ -186,7 +188,6 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        alignItems: 'center'
     },
     modalImage: {width: '100%', borderRadius: 20, aspectRatio: 1},
     infoContainer: {padding: 20, width: '100%', alignItems: 'center'},

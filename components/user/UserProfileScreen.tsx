@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
 import { getMembership } from '@/api/membership';
 import { Membership } from '@/types/Membership';
+import { apiUrl } from '@/api/apiUrl';
+import { useRouter } from 'expo-router';
+
 
 export default function UserProfileScreen() {
     const { user, logout } = useContext(AuthContext);
@@ -23,12 +26,11 @@ export default function UserProfileScreen() {
     const [photoLoading, setPhotoLoading] = useState(true);
     const [membership, setMembership] = useState<Membership | null>(null);
     const [membershipLoading, setMembershipLoading] = useState(true);
-
-    const apiBaseUrl = 'http://192.168.0.30:8080/api';
+    const router = useRouter();
 
     useEffect(() => {
         if (userInfo?.id) {
-            const uri = `${apiBaseUrl}/user/${userInfo.id}/photo`;
+            const uri = `${apiUrl}/user/${userInfo.id}/photo`;
             fetch(uri)
                 .then(res => {
                     if (res.ok) {
@@ -43,7 +45,7 @@ export default function UserProfileScreen() {
 
     useEffect(() => {
         const fetchMembership = async () => {
-            if (userInfo?.id) {
+            if (user?.id) {
                 try {
                     setMembershipLoading(true);
                     const membershipData = await getMembership(user.id);
@@ -58,7 +60,7 @@ export default function UserProfileScreen() {
         };
 
         fetchMembership();
-    }, [userInfo]);
+    }, [user]);
 
     if (userLoading || photoLoading || membershipLoading) return <ActivityIndicator />;
     if (!userInfo || !user) return null;
@@ -168,6 +170,17 @@ export default function UserProfileScreen() {
                     )}
                 </View>
 
+                {/* Przycisk aktywności */}
+                <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={() => router.push('/activity')}
+                >
+                    <Ionicons name="fitness-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Moja aktywność</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+
+
                 {/* Sekcja informacji osobistych */}
                 <View style={styles.personalInfoSection}>
                     <Text style={styles.sectionTitle}>Informacje osobiste</Text>
@@ -243,8 +256,8 @@ const styles = StyleSheet.create({
         elevation: 4
     },
     avatarContainer: {
-        width: 150,
-        height: 150,
+        width: 200,
+        height: 200,
         borderRadius: 25,
         backgroundColor: '#ffc500',
         borderWidth: 3,
@@ -259,8 +272,8 @@ const styles = StyleSheet.create({
         marginBottom: 16
     },
     avatar: {
-        width: 140,
-        height: 140,
+        width: 190,
+        height: 190,
         borderRadius: 20
     },
     nameContainerCenter: {
@@ -301,6 +314,28 @@ const styles = StyleSheet.create({
     statusButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginLeft: 15 },
     statusText: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginLeft: 5 },
     noMembershipText: { fontSize: 16, color: '#666', textAlign: 'center', flex: 1 },
+    activityButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 30,
+        borderWidth: 2,
+        borderColor: '#ffc500',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    activityButtonText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+        marginLeft: 12,
+        flex: 1
+    },
     personalInfoSection: { marginBottom: 30 },
     infoCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, borderWidth: 2, borderColor: '#ffc500', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
     infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },

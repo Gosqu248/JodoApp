@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { publicApi } from '@/api/client';
 import { Post } from '@/types/Post';
 import {PageResponse} from "@/types/PageResponse";
+import { apiUrl } from '@/api/apiUrl';
 
 
 export default function PostsScreen() {
@@ -77,7 +78,7 @@ export default function PostsScreen() {
             id={item.id}
             title={item.title}
             description={item.content}
-            photo={{ uri: `http://192.168.0.30:8080/api/posts/photo/${item.id}` }}
+            photo={{ uri: `${apiUrl}/posts/photo/${item.id}` }}
             createdDate={item.createdDate}
             type={item.postType}
         />
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     },
     headerSubtitle: {
         fontSize: 16,
-        color: 'rgba(255,255,255,0.9)',
+        color: 'rgba(57,56,56,0.9)',
         textAlign: 'center',
         lineHeight: 22,
     },
