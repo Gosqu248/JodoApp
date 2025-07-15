@@ -40,9 +40,15 @@ export default function RootLayout() {
                 <ThemeProvider value={DefaultTheme}>
                     <LocationInitializer />
                     <Stack>
-                        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                        <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Konto' }} />
                         <Stack.Screen name="+not-found" />
-                    </Stack>
+                        <Stack.Screen
+                            name="activity"
+                            options={{
+                                title: 'Moja aktywność',
+                                headerShown: true,    // lub false, jeśli nagłówek ma być ukryty
+                            }}
+                        />                    </Stack>
                     <StatusBar style="auto" />
                 </ThemeProvider>
             </UserProvider>

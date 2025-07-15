@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ActivityStatus } from '@/types/ActivityStatus';
-import { getDailyStats, getWeeklyStats, getMonthlyStats } from '@/api/activity';
+import {getDailyStats, getWeeklyStats, getMonthlyStats, getUsersOnGym} from '@/api/activity';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
 import { formatDuration } from '@/utils/timeUtils';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,6 +26,7 @@ export default function ActivityScreen() {
     const [activityStatus, setActivityStatus] = useState<ActivityStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [onGymCount, setOnGymCount] = useState<number>(0);
 
     const { currentActivity, isInGym } = useLocationTracking(user?.id || null);
 
@@ -52,6 +53,7 @@ export default function ActivityScreen() {
     useFocusEffect(
         useCallback(() => {
             if (user?.id) {
+                fetchOnGymCount();
                 fetchStats();
             }
         }, [user?.id, selectedStats])
@@ -60,6 +62,7 @@ export default function ActivityScreen() {
     useEffect(() => {
         if (user?.id && !currentActivity) {
             const timer = setTimeout(() => {
+                fetchOnGymCount();
                 fetchStats();
             }, 1000);
             return () => clearTimeout(timer);
@@ -92,9 +95,19 @@ export default function ActivityScreen() {
         }
     };
 
+    const fetchOnGymCount = async () => {
+        try {
+            const count = await getUsersOnGym();
+            setOnGymCount(count);
+        } catch (error) {
+            console.error('Błąd przy pobieraniu liczby osób na siłowni:', error);
+        }
+    }
+
     const handleRefresh = async () => {
         setRefreshing(true);
         await fetchStats();
+        await fetchOnGymCount();
         setRefreshing(false);
     };
 
@@ -152,6 +165,14 @@ export default function ActivityScreen() {
                     />
                 }
             >
+
+                <View
+                    style={styles.activityButton}
+                >
+                    <Ionicons name="fitness-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Ilość osób na siłowni: {onGymCount}</Text>
+                </View>
+
                 <View style={styles.header}>
                     <Text style={styles.title}>Moja aktywność</Text>
                 </View>
@@ -333,7 +354,28 @@ const styles = StyleSheet.create({
         marginBottom: 20
     },
     title: { fontSize: 24, fontWeight: 'bold', color: '#000' },
-
+    activityButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 30,
+        borderWidth: 2,
+        borderColor: '#ffc500',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    activityButtonText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+        marginLeft: 12,
+        flex: 1
+    },
     currentActivityCard: {
         backgroundColor: '#f8f9fa',
         borderRadius: 16,

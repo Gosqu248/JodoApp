@@ -18,7 +18,6 @@ import { Membership } from '@/types/Membership';
 import { apiUrl } from '@/api/apiUrl';
 import { useRouter } from 'expo-router';
 
-
 export default function UserProfileScreen() {
     const { user, logout } = useContext(AuthContext);
     const { userInfo, loading: userLoading } = useUser();
@@ -61,6 +60,8 @@ export default function UserProfileScreen() {
 
         fetchMembership();
     }, [user]);
+
+
 
     if (userLoading || photoLoading || membershipLoading) return <ActivityIndicator />;
     if (!userInfo || !user) return null;
