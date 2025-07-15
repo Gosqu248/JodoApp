@@ -114,7 +114,6 @@ export default function ActivityScreen() {
         return 'Ten miesiąc';
     };
 
-    // Funkcja do określenia statusu aktywności
     const getActivityStatusInfo = () => {
         if (!currentActivity) return null;
 
@@ -126,15 +125,6 @@ export default function ActivityScreen() {
                 statusText: 'W siłowni',
                 statusColor: '#4CAF50',
                 statusIcon: 'location' as const
-            };
-        } else {
-            return {
-                title: 'Trening zakończy się za chwilę',
-                icon: 'timer' as const,
-                color: '#ff9800',
-                statusText: 'Poza siłownią (zakończenie za 1 min)',
-                statusColor: '#ff9800',
-                statusIcon: 'location-outline' as const
             };
         }
     };
