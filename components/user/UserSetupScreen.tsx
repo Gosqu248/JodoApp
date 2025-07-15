@@ -87,8 +87,8 @@ export default function UserSetupScreen() {
             await updateUserInfo({
                 firstName: firstName.trim(),
                 lastName: lastName.trim(),
-                birthDate: birthDate.toISOString(),            // ← serializacja daty
-                profileImageUri: profileImage!,                 // ← nazwa zgodna z API :contentReference[oaicite:1]{index=1}
+                birthDate: birthDate.toISOString(),
+                profileImageUri: profileImage!,
             });
         } catch (e) {
             Alert.alert('Błąd', 'Nie udało się zapisać danych.');
