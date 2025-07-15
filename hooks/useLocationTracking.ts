@@ -35,19 +35,11 @@ const handleBackgroundLocation = async (location: Location.LocationObject) => {
         const storedUserId = await AsyncStorage.getItem(STORAGE_KEYS.USER_ID);
         const wasInGym = (await AsyncStorage.getItem(STORAGE_KEYS.IS_IN_GYM)) === 'true';
 
-        console.log('Background location update:', {
-            isInGym,
-            wasInGym,
-            hasActivity: !!storedActivity,
-            userId: storedUserId
-        });
-
         // Wejście do siłowni - rozpocznij aktywność
         if (isInGym && !wasInGym && !storedActivity && storedUserId) {
             try {
                 const activity = await startActivity(storedUserId);
                 await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_ACTIVITY, JSON.stringify(activity));
-                console.log('Activity started in background:', activity.id);
             } catch (error) {
                 console.error('Error starting activity in background:', error);
             }
@@ -59,20 +51,17 @@ const handleBackgroundLocation = async (location: Location.LocationObject) => {
                 const activity = JSON.parse(storedActivity) as ActivityResponse;
                 await endActivity(activity.id);
                 await AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_ACTIVITY);
-                console.log('Activity ended in background:', activity.id);
             } catch (error) {
                 console.error('Error ending activity in background:', error);
             }
         }
 
-        // Zawsze aktualizuj stan lokalizacji
         await AsyncStorage.setItem(STORAGE_KEYS.IS_IN_GYM, isInGym.toString());
     } catch (error) {
         console.error('Error in background handler:', error);
     }
 };
 
-// TaskManager dla background updates
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     if (error) {
         console.error('Location task error:', error);
@@ -101,13 +90,13 @@ function calculateDistance(
     lat1: number, lon1: number, lat2: number, lon2: number
 ): number {
     const R = 6371e3;
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const p1 = lat1 * Math.PI / 180;
+    const p2 = lat2 * Math.PI / 180;
+    const del1 = (lat2 - lat1) * Math.PI / 180;
+    const del2 = (lon2 - lon1) * Math.PI / 180;
     const a =
-        Math.sin(Δφ / 2) ** 2 +
-        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+        Math.sin(del1 / 2) ** 2 +
+        Math.cos(p1) * Math.cos(p2) * Math.sin(del2 / 2) ** 2;
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
@@ -118,6 +107,9 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
     const [isInGym, setIsInGym] = useState(false);
     const locationSubscription = useRef<Location.LocationSubscription | null>(null);
 
+    const wasInGymRef = useRef(isInGym);
+    const currentActivityRef = useRef<ActivityResponse | null>(currentActivity);
+
     useEffect(() => {
         const loadStoredData = async () => {
             try {
@@ -125,10 +117,14 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
                 const storedInGym = await AsyncStorage.getItem(STORAGE_KEYS.IS_IN_GYM);
 
                 if (storedActivity) {
-                    setCurrentActivity(JSON.parse(storedActivity));
+                    const activity = JSON.parse(storedActivity);
+                    setCurrentActivity(activity);
+                    currentActivityRef.current = activity;
                 }
                 if (storedInGym) {
-                    setIsInGym(storedInGym === 'true');
+                    const inGymValue = storedInGym === 'true';
+                    setIsInGym(inGymValue);
+                    wasInGymRef.current = inGymValue;
                 }
             } catch (error) {
                 console.error('Error loading stored data:', error);
@@ -147,19 +143,23 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
                 if (storedActivity) {
                     const activity = JSON.parse(storedActivity);
                     setCurrentActivity(activity);
+                    currentActivityRef.current = activity;
                 } else {
                     setCurrentActivity(null);
+                    currentActivityRef.current = null;
                 }
 
                 if (storedInGym) {
-                    setIsInGym(storedInGym === 'true');
+                    const inGymValue = storedInGym === 'true';
+                    setIsInGym(inGymValue);
+                    wasInGymRef.current = inGymValue;
                 }
             } catch (error) {
                 console.error('Error checking storage changes:', error);
             }
         };
 
-        const interval = setInterval(checkStorageChanges, 2000); // Sprawdzaj co 2 sekundy
+        const interval = setInterval(checkStorageChanges, 10000);
         return () => clearInterval(interval);
     }, []);
 
@@ -223,26 +223,24 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
         const ok = await requestPermissions();
         if (!ok) return;
 
-        // Pojedyncze subskrypcje w foreground
         if (!locationSubscription.current) {
             locationSubscription.current = await Location.watchPositionAsync(
                 {
                     accuracy: Location.Accuracy.High,
-                    distanceInterval: 1,
+                    distanceInterval: 20,
                 },
                 handleLocationUpdate
             );
         }
 
-        // Uruchom background tracking
         try {
             const isTaskRegistered = await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME);
             if (!isTaskRegistered) {
                 await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
                     accuracy: Location.Accuracy.High,
-                    timeInterval: 15000, // Zmniejszone z 30000 na 15000 dla szybszego reagowania
-                    distanceInterval: 5, // Zmniejszone z 10 na 5 dla lepszej dokładności
-                    deferredUpdatesInterval: 30000, // Zmniejszone z 60000
+                    timeInterval: 30000, // Zmniejszone z 30000 na 15000 dla szybszego reagowania
+                    distanceInterval: 20, // Zmniejszone z 10 na 5 dla lepszej dokładności
+                    deferredUpdatesInterval: 60000, // Zmniejszone z 60000
                     foregroundService:
                         Platform.OS === 'android'
                             ? {
@@ -271,13 +269,13 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
                 await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
             }
 
-            // Jeśli było uruchomione Activity, zakończ je
             const storedActivity = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_ACTIVITY);
             if (storedActivity) {
                 const activity = JSON.parse(storedActivity) as ActivityResponse;
                 await endActivity(activity.id);
                 await AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_ACTIVITY);
                 setCurrentActivity(null);
+                currentActivityRef.current = null;
             }
         } catch (error) {
             console.error('Error stopping location tracking:', error);
@@ -287,24 +285,27 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
     const handleLocationUpdate = async (location: Location.LocationObject) => {
         try {
             const nowInGym = isLocationInGym(location.coords);
-            const previousInGym = isInGym;
+            const wasInGym = wasInGymRef.current;
+            const currentActivityVal = currentActivityRef.current;
 
-            console.log('Foreground location update:', {
-                nowInGym,
-                previousInGym,
-                hasActivity: !!currentActivity,
-                userId
-            });
-
-            // Aktualizuj stan
+            wasInGymRef.current = nowInGym;
+            currentActivityRef.current = currentActivityVal;
             setIsInGym(nowInGym);
             await AsyncStorage.setItem(STORAGE_KEYS.IS_IN_GYM, nowInGym.toString());
 
+            console.log('Foreground location update:', {
+                nowInGym,
+                wasInGym,
+                hasActivity: !!currentActivityVal,
+                userId
+            });
+
             // Wejście do siłowni - rozpocznij aktywność
-            if (nowInGym && !previousInGym && !currentActivity && userId) {
+            if (nowInGym && !wasInGym && !currentActivityVal && userId) {
                 try {
                     const activity = await startActivity(userId);
                     setCurrentActivity(activity);
+                    currentActivityRef.current = activity;
                     await AsyncStorage.setItem(
                         STORAGE_KEYS.CURRENT_ACTIVITY,
                         JSON.stringify(activity)
@@ -316,12 +317,13 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
             }
 
             // Wyjście z siłowni - zakończ aktywność
-            if (!nowInGym && previousInGym && currentActivity) {
+            if (!nowInGym && wasInGym && currentActivityVal) {
                 try {
-                    await endActivity(currentActivity.id);
+                    await endActivity(currentActivityVal.id);
                     setCurrentActivity(null);
+                    currentActivityRef.current = null;
                     await AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_ACTIVITY);
-                    console.log('Activity ended in foreground:', currentActivity.id);
+                    console.log('Activity ended in foreground:', currentActivityVal.id);
                 } catch (error) {
                     console.error('Error ending activity in foreground:', error);
                 }
