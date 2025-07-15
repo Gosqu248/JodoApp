@@ -1,290 +1,330 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
     View,
-    TouchableOpacity,
     ScrollView,
     SafeAreaView,
-    StatusBar,
     ActivityIndicator,
-    Alert
+    Alert,
+    RefreshControl,
+    TouchableOpacity
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '@/context/AuthContext';
-import {
-    startActivity,
-    endActivity,
-    getDailyStats,
-    getWeeklyStats,
-    getMonthlyStats,
-} from '@/api/activity';
-import { useRouter } from 'expo-router';
-import {ActivityStatus} from "@/types/ActivityStatus";
-import { ActivityResponse } from '@/types/ActivityResponse';
+import { useAuth } from '@/context/AuthContext';
+import { ActivityStatus } from '@/types/ActivityStatus';
+import { getDailyStats, getWeeklyStats, getMonthlyStats } from '@/api/activity';
+import { useLocationTracking } from '@/hooks/useLocationTracking';
+import { formatDuration } from '@/utils/timeUtils';
+import { useFocusEffect } from '@react-navigation/native';
 
-type PeriodType = 'daily' | 'weekly' | 'monthly';
+type StatsType = 'daily' | 'weekly' | 'monthly';
 
 export default function ActivityScreen() {
-    const { user } = useContext(AuthContext);
-    const router = useRouter();
-    const [currentActivity, setCurrentActivity] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('daily');
-    const [stats, setStats] = useState<ActivityStatus | null>(null);
-    const [statsLoading, setStatsLoading] = useState(false);
+    const { user } = useAuth();
+    const [selectedStats, setSelectedStats] = useState<StatsType>('daily');
+    const [activityStatus, setActivityStatus] = useState<ActivityStatus | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const { currentActivity, isInGym } = useLocationTracking(user?.id || null);
+
+    const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
     useEffect(() => {
-        if (user?.id) {
-            loadStats();
+        let interval: number;
+        if (currentActivity) {
+            const update = () => {
+                const diffMs = Date.now() - new Date(currentActivity.startTime).getTime();
+                setElapsedMinutes(Math.floor(diffMs / 60000));
+            };
+            update();
+            interval = setInterval(update, 60_000);
+        } else {
+            setElapsedMinutes(0);
         }
-    }, [user, selectedPeriod]);
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [currentActivity]);
 
-    const loadStats = async () => {
+    // Odświeżaj statystyki gdy screen jest w fokusie
+    useFocusEffect(
+        useCallback(() => {
+            if (user?.id) {
+                fetchStats();
+            }
+        }, [user?.id, selectedStats])
+    );
+
+    useEffect(() => {
+        if (user?.id && !currentActivity) {
+            const timer = setTimeout(() => {
+                fetchStats();
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [currentActivity, user?.id]);
+
+    const fetchStats = async () => {
         if (!user?.id) return;
-
-        setStatsLoading(true);
+        setLoading(true);
         try {
             const today = new Date().toISOString().split('T')[0];
-            let data: ActivityStatus;
+            let stats: ActivityStatus;
 
-            switch (selectedPeriod) {
-                case 'daily':
-                    data = await getDailyStats(user.id, today);
-                    break;
-                case 'weekly':
-                    const weekStart = getWeekStart(new Date()).toISOString().split('T')[0];
-                    data = await getWeeklyStats(user.id, weekStart);
-                    break;
-                case 'monthly':
-                    const monthStart = getMonthStart(new Date()).toISOString().split('T')[0];
-                    data = await getMonthlyStats(user.id, monthStart);
-                    break;
-                default:
-                    data = await getDailyStats(user.id, today);
+            if (selectedStats === 'daily') {
+                stats = await getDailyStats(user.id, today);
+            } else if (selectedStats === 'weekly') {
+                const weekStart = getWeekStart(new Date()).toISOString().split('T')[0];
+                stats = await getWeeklyStats(user.id, weekStart);
+            } else {
+                const monthStart = getMonthStart(new Date()).toISOString().split('T')[0];
+                stats = await getMonthlyStats(user.id, monthStart);
             }
 
-            setStats(data);
+            setActivityStatus(stats);
         } catch (error) {
-            console.error('Błąd przy pobieraniu statystyk:', error);
+            console.error('Error fetching stats:', error);
             Alert.alert('Błąd', 'Nie udało się pobrać statystyk aktywności');
         } finally {
-            setStatsLoading(false);
+            setLoading(false);
         }
     };
 
-    const handleStartActivity = async () => {
-        if (!user?.id) return;
-
-        setIsLoading(true);
-        try {
-            const result = await startActivity(user.id);
-            setCurrentActivity(result.id);
-            Alert.alert('Sukces', 'Aktywność została rozpoczęta!');
-        } catch (error) {
-            console.error('Błąd przy rozpoczynaniu aktywności:', error);
-            Alert.alert('Błąd', 'Nie udało się rozpocząć aktywności');
-        } finally {
-            setIsLoading(false);
-        }
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchStats();
+        setRefreshing(false);
     };
 
-    const handleEndActivity = async () => {
-        if (!currentActivity) return;
-
-        setIsLoading(true);
-        try {
-            await endActivity(currentActivity);
-            setCurrentActivity(null);
-            Alert.alert('Sukces', 'Aktywność została zakończona!');
-            loadStats(); // Odświeżamy statystyki
-        } catch (error) {
-            console.error('Błąd przy kończeniu aktywności:', error);
-            Alert.alert('Błąd', 'Nie udało się zakończyć aktywności');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const getWeekStart = (date: Date): Date => {
+    const getWeekStart = (date: Date) => {
         const d = new Date(date);
         const day = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         return new Date(d.setDate(diff));
     };
 
-    const getMonthStart = (date: Date): Date => {
-        return new Date(date.getFullYear(), date.getMonth(), 1);
+    const getMonthStart = (date: Date) =>
+        new Date(date.getFullYear(), date.getMonth(), 1);
+
+    const getStatsTitle = () => {
+        if (selectedStats === 'daily') return 'Dzisiaj';
+        if (selectedStats === 'weekly') return 'Ten tydzień';
+        return 'Ten miesiąc';
     };
 
-    const formatDuration = (minutes: number): string => {
-        const hours = Math.floor(minutes / 60);
-        const remainingMinutes = minutes % 60;
-        return `${hours}h ${remainingMinutes}min`;
-    };
+    // Funkcja do określenia statusu aktywności
+    const getActivityStatusInfo = () => {
+        if (!currentActivity) return null;
 
-    const formatDate = (dateString: string): string => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pl-PL', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
-    const getPeriodTitle = (): string => {
-        switch (selectedPeriod) {
-            case 'daily':
-                return 'Dzisiaj';
-            case 'weekly':
-                return 'Ten tydzień';
-            case 'monthly':
-                return 'Ten miesiąc';
-            default:
-                return 'Dzisiaj';
+        if (isInGym) {
+            return {
+                title: 'Trening w toku',
+                icon: 'fitness' as const,
+                color: '#4CAF50',
+                statusText: 'W siłowni',
+                statusColor: '#4CAF50',
+                statusIcon: 'location' as const
+            };
+        } else {
+            return {
+                title: 'Trening zakończy się za chwilę',
+                icon: 'timer' as const,
+                color: '#ff9800',
+                statusText: 'Poza siłownią (zakończenie za 1 min)',
+                statusColor: '#ff9800',
+                statusIcon: 'location-outline' as const
+            };
         }
     };
 
-    if (!user) return null;
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <ActivityIndicator size="large" color="#ffc500" style={styles.loader} />
+            </SafeAreaView>
+        );
+    }
+
+    const statusInfo = getActivityStatusInfo();
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.back()}
-                >
-                    <Ionicons name="arrow-back" size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Moja aktywność</Text>
-            </View>
-
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        colors={['#ffc500']}
+                    />
+                }
             >
-                {/* Przycisk Start/Stop */}
-                <View style={styles.actionSection}>
-                    <TouchableOpacity
-                        style={[
-                            styles.actionButton,
-                            currentActivity ? styles.stopButton : styles.startButton
-                        ]}
-                        onPress={currentActivity ? handleEndActivity : handleStartActivity}
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <ActivityIndicator color="#fff" />
-                        ) : (
-                            <>
-                                <Ionicons
-                                    name={currentActivity ? "stop" : "play"}
-                                    size={32}
-                                    color="#fff"
-                                />
-                                <Text style={styles.actionButtonText}>
-                                    {currentActivity ? 'Zakończ trening' : 'Rozpocznij trening'}
-                                </Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Moja aktywność</Text>
                 </View>
 
-                {/* Selektor okresu */}
+                {/* Pokaż kartę aktualnej aktywności tylko gdy jest aktywna */}
+                {currentActivity && statusInfo && (
+                    <View style={[
+                        styles.currentActivityCard,
+                        { borderColor: statusInfo.color }
+                    ]}>
+                        <View style={styles.currentActivityHeader}>
+                            <Ionicons name={statusInfo.icon} size={24} color={statusInfo.color} />
+                            <Text style={[
+                                styles.currentActivityTitle,
+                                { color: statusInfo.color }
+                            ]}>
+                                {statusInfo.title}
+                            </Text>
+                        </View>
+                        <View style={styles.currentActivityTime}>
+                            <Text style={styles.currentActivityDuration}>
+                                {formatDuration(elapsedMinutes)}
+                            </Text>
+                            <Text style={styles.currentActivityLabel}>
+                                Rozpoczęto:{' '}
+                                {new Date(currentActivity.startTime).toLocaleTimeString('pl-PL', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
+                            </Text>
+                        </View>
+                        <View style={styles.locationStatus}>
+                            <Ionicons
+                                name={statusInfo.statusIcon}
+                                size={16}
+                                color={statusInfo.statusColor}
+                            />
+                            <Text style={[
+                                styles.locationText,
+                                { color: statusInfo.statusColor }
+                            ]}>
+                                {statusInfo.statusText}
+                            </Text>
+                        </View>
+                    </View>
+                )}
+
                 <View style={styles.periodSelector}>
-                    <TouchableOpacity
-                        style={[
-                            styles.periodButton,
-                            selectedPeriod === 'daily' && styles.activePeriodButton
-                        ]}
-                        onPress={() => setSelectedPeriod('daily')}
-                    >
-                        <Text style={[
-                            styles.periodButtonText,
-                            selectedPeriod === 'daily' && styles.activePeriodButtonText
-                        ]}>
-                            Dzień
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[
-                            styles.periodButton,
-                            selectedPeriod === 'weekly' && styles.activePeriodButton
-                        ]}
-                        onPress={() => setSelectedPeriod('weekly')}
-                    >
-                        <Text style={[
-                            styles.periodButtonText,
-                            selectedPeriod === 'weekly' && styles.activePeriodButtonText
-                        ]}>
-                            Tydzień
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[
-                            styles.periodButton,
-                            selectedPeriod === 'monthly' && styles.activePeriodButton
-                        ]}
-                        onPress={() => setSelectedPeriod('monthly')}
-                    >
-                        <Text style={[
-                            styles.periodButtonText,
-                            selectedPeriod === 'monthly' && styles.activePeriodButtonText
-                        ]}>
-                            Miesiąc
-                        </Text>
-                    </TouchableOpacity>
+                    {(['daily', 'weekly', 'monthly'] as StatsType[]).map((period) => (
+                        <TouchableOpacity
+                            key={period}
+                            style={[
+                                styles.periodButton,
+                                selectedStats === period && styles.periodButtonActive
+                            ]}
+                            onPress={() => setSelectedStats(period)}
+                        >
+                            <Text
+                                style={[
+                                    styles.periodButtonText,
+                                    selectedStats === period && styles.periodButtonTextActive
+                                ]}
+                            >
+                                {period === 'daily'
+                                    ? 'Dzień'
+                                    : period === 'weekly'
+                                        ? 'Tydzień'
+                                        : 'Miesiąc'}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
 
-                {/* Statystyki */}
                 <View style={styles.statsSection}>
-                    <Text style={styles.statsTitle}>{getPeriodTitle()}</Text>
+                    <Text style={styles.sectionTitle}>{getStatsTitle()}</Text>
 
-                    {statsLoading ? (
-                        <ActivityIndicator style={styles.loader} />
-                    ) : stats ? (
-                        <View>
-                            <View style={styles.statsCards}>
-                                <View style={styles.statsCard}>
-                                    <Ionicons name="time-outline" size={24} color="#ffc500" />
-                                    <Text style={styles.statsValue}>
-                                        {formatDuration(stats.totalMinutes)}
+                    {activityStatus ? (
+                        <>
+                            <View style={styles.statsGrid}>
+                                <View style={styles.statCard}>
+                                    <Ionicons name="time-outline" size={32} color="#ffc500" />
+                                    <Text style={styles.statValue}>
+                                        {formatDuration(activityStatus.totalMinutes)}
                                     </Text>
-                                    <Text style={styles.statsLabel}>Łączny czas</Text>
+                                    <Text style={styles.statLabel}>Łączny czas</Text>
                                 </View>
-                                <View style={styles.statsCard}>
-                                    <Ionicons name="fitness-outline" size={24} color="#ffc500" />
-                                    <Text style={styles.statsValue}>{stats.sessionsCount}</Text>
-                                    <Text style={styles.statsLabel}>Sesje</Text>
+
+                                <View style={styles.statCard}>
+                                    <Ionicons
+                                        name="fitness-outline"
+                                        size={32}
+                                        color="#4CAF50"
+                                    />
+                                    <Text style={styles.statValue}>
+                                        {activityStatus.sessionsCount}
+                                    </Text>
+                                    <Text style={styles.statLabel}>Sesje</Text>
                                 </View>
                             </View>
 
-                            {/* Lista aktywności */}
-                            {stats.activities.length > 0 && (
+                            {activityStatus.activities.length > 0 && (
                                 <View style={styles.activitiesSection}>
-                                    <Text style={styles.activitiesTitle}>Historia aktywności</Text>
-                                    {stats.activities.map((activity: ActivityResponse) => (
-                                        <View key={activity.id} style={styles.activityItem}>
+                                    <Text style={styles.sectionTitle}>
+                                        Historia aktywności
+                                    </Text>
+                                    {activityStatus.activities.map((activity) => (
+                                        <View
+                                            key={activity.id}
+                                            style={styles.activityItem}
+                                        >
                                             <View style={styles.activityInfo}>
-                                                <Text style={styles.activityTime}>
-                                                    {formatDate(activity.startTime)} - {formatDate(activity.endTime)}
+                                                <Text style={styles.activityDate}>
+                                                    {new Date(
+                                                        activity.startTime
+                                                    ).toLocaleDateString('pl-PL')}
                                                 </Text>
-                                                <Text style={styles.activityDuration}>
-                                                    {formatDuration(activity.durationMinutes)}
+                                                <Text style={styles.activityTime}>
+                                                    {new Date(
+                                                        activity.startTime
+                                                    ).toLocaleTimeString('pl-PL', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}{' '}
+                                                    -{' '}
+                                                    {activity.endTime
+                                                        ? new Date(activity.endTime).toLocaleTimeString('pl-PL', {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })
+                                                        : 'W toku'
+                                                    }
                                                 </Text>
                                             </View>
-                                            <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                                            <View style={styles.activityDuration}>
+                                                <Text
+                                                    style={
+                                                        styles.activityDurationText
+                                                    }
+                                                >
+                                                    {formatDuration(
+                                                        activity.durationMinutes
+                                                    )}
+                                                </Text>
+                                            </View>
                                         </View>
                                     ))}
                                 </View>
                             )}
-                        </View>
+                        </>
                     ) : (
-                        <Text style={styles.noDataText}>Brak danych o aktywności</Text>
+                        <View style={styles.noDataContainer}>
+                            <Ionicons
+                                name="fitness-outline"
+                                size={48}
+                                color="#ccc"
+                            />
+                            <Text style={styles.noDataText}>
+                                Brak danych o aktywności
+                            </Text>
+                            <Text style={styles.noDataSubText}>
+                                Rozpocznij trening, wchodząc do siłowni
+                            </Text>
+                        </View>
                     )}
                 </View>
             </ScrollView>
@@ -293,64 +333,54 @@ export default function ActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff'
-    },
+    container: { flex: 1, backgroundColor: '#fff' },
+    scrollContainer: { padding: 20, paddingBottom: 80 },
+    loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0'
+        marginBottom: 20
     },
-    backButton: {
-        marginRight: 15
+    title: { fontSize: 24, fontWeight: 'bold', color: '#000' },
+
+    currentActivityCard: {
+        backgroundColor: '#f8f9fa',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 20,
+        borderWidth: 2,
+        borderColor: '#4CAF50'
     },
-    headerTitle: {
-        fontSize: 20,
+    currentActivityHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10
+    },
+    currentActivityTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#4CAF50',
+        marginLeft: 8
+    },
+    currentActivityTime: { alignItems: 'center' },
+    currentActivityDuration: {
+        fontSize: 32,
         fontWeight: 'bold',
         color: '#000'
     },
-    scrollContainer: {
-        padding: 20,
-        paddingBottom: 80
+    currentActivityLabel: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 4
     },
-    actionSection: {
-        alignItems: 'center',
-        marginBottom: 30
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-        paddingVertical: 20,
-        borderRadius: 50,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-        elevation: 8
-    },
-    startButton: {
-        backgroundColor: '#4CAF50'
-    },
-    stopButton: {
-        backgroundColor: '#F44336'
-    },
-    actionButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginLeft: 10
-    },
+
     periodSelector: {
         flexDirection: 'row',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#f8f9fa',
         borderRadius: 12,
         padding: 4,
-        marginBottom: 30
+        marginBottom: 20
     },
     periodButton: {
         flex: 1,
@@ -358,102 +388,78 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: 8
     },
-    activePeriodButton: {
-        backgroundColor: '#ffc500'
-    },
-    periodButtonText: {
-        fontSize: 16,
-        color: '#666'
-    },
-    activePeriodButtonText: {
-        color: '#000',
-        fontWeight: 'bold'
-    },
-    statsSection: {
-        marginBottom: 30
-    },
-    statsTitle: {
-        fontSize: 24,
+    periodButtonActive: { backgroundColor: '#ffc500' },
+    periodButtonText: { fontSize: 16, fontWeight: '600', color: '#666' },
+    periodButtonTextActive: { color: '#000' },
+
+    statsSection: { marginBottom: 30 },
+    sectionTitle: {
+        fontSize: 20,
         fontWeight: 'bold',
         color: '#000',
-        marginBottom: 20,
-        textAlign: 'center'
+        marginBottom: 15
     },
-    loader: {
-        marginTop: 20
-    },
-    statsCards: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 30
-    },
-    statsCard: {
+    statsGrid: { flexDirection: 'row', gap: 15, marginBottom: 20 },
+    statCard: {
         flex: 1,
         backgroundColor: '#fff',
         borderRadius: 16,
         padding: 20,
         alignItems: 'center',
-        marginHorizontal: 10,
         borderWidth: 2,
-        borderColor: '#ffc500',
+        borderColor: '#f0f0f0',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3
     },
-    statsValue: {
+    statValue: {
         fontSize: 24,
         fontWeight: 'bold',
         color: '#000',
-        marginTop: 10,
-        marginBottom: 5
+        marginTop: 8,
+        marginBottom: 4
     },
-    statsLabel: {
-        fontSize: 14,
-        color: '#666'
-    },
-    activitiesSection: {
-        marginTop: 20
-    },
-    activitiesTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#000',
-        marginBottom: 15
-    },
+    statLabel: { fontSize: 14, color: '#666', textAlign: 'center' },
+
+    activitiesSection: { marginTop: 20 },
     activityItem: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
         backgroundColor: '#fff',
         borderRadius: 12,
-        padding: 15,
+        padding: 16,
         marginBottom: 10,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2
+        borderColor: '#f0f0f0'
     },
-    activityInfo: {
-        flex: 1
-    },
-    activityTime: {
+    activityInfo: { flex: 1 },
+    activityDate: {
         fontSize: 16,
+        fontWeight: '600',
         color: '#000',
-        marginBottom: 5
+        marginBottom: 4
     },
-    activityDuration: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '600'
-    },
-    noDataText: {
-        textAlign: 'center',
+    activityTime: { fontSize: 14, color: '#666' },
+    activityDuration: { alignItems: 'flex-end' },
+    activityDurationText: {
         fontSize: 16,
-        color: '#666',
-        marginTop: 20
+        fontWeight: 'bold',
+        color: '#ffc500'
+    },
+
+    noDataContainer: { alignItems: 'center', paddingVertical: 40 },
+    noDataText: { fontSize: 16, color: '#666', marginTop: 12 },
+    noDataSubText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 4 },
+    locationStatus: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10
+    },
+    locationText: {
+        fontSize: 14,
+        marginLeft: 6
     }
 });

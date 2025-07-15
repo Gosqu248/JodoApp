@@ -2,7 +2,7 @@ import {publicApi} from "@/api/client";
 import {ActivityStatus} from "@/types/ActivityStatus";
 import {ActivityResponse} from "@/types/ActivityResponse";
 
-export const startActivity = async (userId: string): Promise<ActivityResponse> => {
+export const startActivity = async (userId: string | null): Promise<ActivityResponse> => {
     const response = await publicApi.post(`/activity/start/${userId}`);
     return response.data;
 };
