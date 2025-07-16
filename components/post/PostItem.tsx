@@ -118,10 +118,10 @@ export default function PostItem({
                         <View style={styles.infoContainer}>
                             <ThemedText style={styles.modalTitle}>{title}</ThemedText>
                             <ThemedText style={styles.modalDescription}>{description}</ThemedText>
-                            <ThemedText style={styles.modalDate}>📅 {dateText}</ThemedText>
-                            <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
-                                <ThemedText style={styles.closeButtonText}>Zamknij</ThemedText>
-                            </TouchableOpacity>
+                                <ThemedText style={styles.modalDate}>📅 {dateText}</ThemedText>
+                                <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                                    <ThemedText style={styles.closeButtonText}>Zamknij</ThemedText>
+                                </TouchableOpacity>
                         </View>
                 </ThemedView>
             </Modal>
@@ -185,15 +185,14 @@ const styles = StyleSheet.create({
     accentLine: {height: 4, width: '100%'},
     modalContainer: {
         flex: 1,
-        borderRadius: 20,
         alignItems: 'center',
-        justifyContent: 'center',
     },
-    modalImage: {width: '100%', borderRadius: 20, aspectRatio: 1},
+    modalImage: {width: '90%', borderRadius: 20, aspectRatio: 1, marginTop: 5},
     infoContainer: {padding: 20, width: '100%', alignItems: 'center'},
     modalTitle: {fontSize: 24, fontWeight: 'bold', marginTop: 5, textAlign: 'center', marginBottom: 12, color: '#2D3748'},
-    modalDescription: {fontSize: 16, lineHeight: 24, color: '#4A5568', marginBottom: 16},
-    modalDate: {fontSize: 16, color: '#718096', fontWeight: '500', marginBottom: 20},
-    closeButton: {paddingVertical: 10, paddingHorizontal: 50, borderRadius: 20, backgroundColor: '#5E72E4'},
+    modalDescription: {fontSize: 14, lineHeight: 24, color: '#4A5568', marginBottom: 16},
+    modalDateContainer: {display: "flex", flexDirection: 'row', gap: 10, justifyContent: "center", alignItems: 'center'},
+    modalDate: {fontSize: 14, color: '#718096', fontWeight: '500', marginBottom: 10},
+    closeButton: {paddingVertical: 10, paddingHorizontal: 50, borderRadius: 20, backgroundColor: '#ffb300'},
     closeButtonText: {color: '#FFFFFF', fontSize: 20, fontWeight: '600'},
 });

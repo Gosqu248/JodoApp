@@ -41,14 +41,14 @@ export default function RootLayout() {
                     <LocationInitializer />
                     <Stack>
                         <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Konto' }} />
-                        <Stack.Screen name="+not-found" />
                         <Stack.Screen
                             name="activity"
                             options={{
                                 title: 'Moja aktywność',
-                                headerShown: true,    // lub false, jeśli nagłówek ma być ukryty
+                                headerShown: true,
                             }}
-                        />                    </Stack>
+                        />
+                    </Stack>
                     <StatusBar style="auto" />
                 </ThemeProvider>
             </UserProvider>

@@ -246,10 +246,10 @@ const styles = StyleSheet.create({
     },
     scrollContainer: {
         padding: 20,
-        paddingBottom: 80
     },
     header: {
         alignItems: 'center',
+        marginTop: 5,
         marginBottom: 30
     },
     title: {
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     photoCard: {
         backgroundColor: '#fff',
         borderRadius: 16,
-        padding: 20,
+        padding: 10,
         borderWidth: 2,
         borderColor: '#ffc500',
         shadowColor: '#000',
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     photoContainer: {
         width: 120,
         height: 120,
-        borderRadius: 60,
+        borderRadius: 20,
         backgroundColor: '#f0f0f0',
         marginBottom: 20,
         overflow: 'hidden'
@@ -352,14 +352,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#000',
-        paddingHorizontal: 20,
+        paddingHorizontal: 10,
         paddingVertical: 12,
         borderRadius: 10,
         marginBottom: 20
     },
     photoButtonText: {
         color: '#ffc500',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         marginLeft: 8
     },
@@ -383,7 +383,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-around',
         width: '100%',
-        marginBottom: 20,
+        marginBottom: 10,
+        gap: 5
     },
     submitButton: {
         flexDirection: 'row',

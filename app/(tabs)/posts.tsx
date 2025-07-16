@@ -5,7 +5,7 @@ import {
     ActivityIndicator,
     RefreshControl,
     FlatList,
-    ListRenderItemInfo,
+    ListRenderItemInfo, StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import PostItem from '@/components/post/PostItem';
@@ -94,6 +94,8 @@ export default function PostsScreen() {
 
     return (
         <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="#ffce00"/>
+
             <LinearGradient
                 colors={['#ffce00', '#fbcd36']}
                 style={styles.header}
@@ -125,7 +127,7 @@ export default function PostsScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8FAFC' },
     header: {
-        paddingTop: 60,
+        paddingTop: 30,
         paddingBottom: 10,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
@@ -150,7 +152,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 22,
     },
-    postsContainer: { paddingTop: 20, paddingBottom: 100 },
+    postsContainer: { paddingTop: 20, paddingBottom: 40 },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     footer: { paddingVertical: 20 },
 });
