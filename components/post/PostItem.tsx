@@ -186,6 +186,7 @@ const styles = StyleSheet.create({
     modalContainer: {
         flex: 1,
         alignItems: 'center',
+        justifyContent: 'center',
     },
     modalImage: {width: '90%', borderRadius: 20, aspectRatio: 1, marginTop: 5},
     infoContainer: {padding: 20, width: '100%', alignItems: 'center'},

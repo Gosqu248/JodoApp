@@ -287,7 +287,8 @@ export default function ActivityScreen() {
                                                 <Text style={styles.activityDate}>
                                                     {new Date(
                                                         activity.startTime
-                                                    ).toLocaleDateString('pl-PL')}
+                                                    ).toLocaleDateString('pl-PL',
+                                                        { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'long' })}
                                                 </Text>
                                                 <Text style={styles.activityTime}>
                                                     {new Date(
