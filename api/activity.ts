@@ -35,6 +35,5 @@ export const getMonthlyStats = async (userId: string, startDate: string): Promis
 
 export const getUsersOnGym = async (): Promise<number> => {
     const response = await publicApi.get(`/activity/users`);
-    console.log(response.data);
     return response.data;
 };

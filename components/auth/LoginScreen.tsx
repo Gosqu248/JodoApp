@@ -1,4 +1,15 @@
-import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import {
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    TouchableOpacity,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar
+} from 'react-native'
 import React, {useContext, useState} from 'react'
 import {AuthContext} from "@/context/AuthContext";
 import {Image} from "expo-image";
@@ -49,6 +60,8 @@ export default function LoginScreen() {
             locations={[0.3, 1]}
             style={styles.container}
         >
+            <StatusBar barStyle="white-content" backgroundColor="#1a1a1a"/>
+
             <KeyboardAvoidingView 
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardAvoidingView}
@@ -142,11 +155,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
+        paddingTop: 10,
         paddingBottom: 40,
     },
     logo: {
-        width: 200,
-        height: 200,
+        width: 150,
+        height: 150,
         marginBottom: 20,
     },
     title: {

@@ -235,6 +235,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff'
     },
     scrollContainer: {
+        marginTop: 20,
         padding: 20,
         paddingBottom: 80
     },

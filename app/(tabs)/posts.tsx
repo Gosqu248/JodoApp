@@ -5,9 +5,8 @@ import {
     ActivityIndicator,
     RefreshControl,
     FlatList,
-    ListRenderItemInfo,
+    ListRenderItemInfo, SafeAreaView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import PostItem from '@/components/post/PostItem';
 import { ThemedText } from '@/components/ThemedText';
 import { publicApi } from '@/api/client';
@@ -93,18 +92,14 @@ export default function PostsScreen() {
     }
 
     return (
-        <View style={styles.container}>
-            <LinearGradient
-                colors={['#ffce00', '#fbcd36']}
-                style={styles.header}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
+        <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
                 <ThemedText style={styles.headerTitle}>🏋️ Aktualności</ThemedText>
                 <ThemedText style={styles.headerSubtitle}>
                     Bądź na bieżąco z tym co dzieje się w siłowni
                 </ThemedText>
-            </LinearGradient>
+            </View>
+
 
             <FlatList
                 data={posts}
@@ -118,31 +113,21 @@ export default function PostsScreen() {
                 }
                 contentContainerStyle={styles.postsContainer}
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    container: { flex: 1},
     header: {
-        paddingTop: 60,
+        paddingTop: 10,
         paddingBottom: 10,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 8,
     },
     headerTitle: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: '#FFFFFF',
+        color: '#ffb300',
         textAlign: 'center',
-        paddingTop: 10,
-        marginBottom: 8,
     },
     headerSubtitle: {
         fontSize: 16,
@@ -150,7 +135,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 22,
     },
-    postsContainer: { paddingTop: 20, paddingBottom: 100 },
+    postsContainer: { paddingTop: 5, paddingBottom: 40 },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     footer: { paddingVertical: 20 },
 });

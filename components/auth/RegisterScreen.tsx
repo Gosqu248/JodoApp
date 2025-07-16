@@ -1,4 +1,15 @@
-import {Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform} from 'react-native'
+import {
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+    KeyboardAvoidingView,
+    Platform,
+    StatusBar
+} from 'react-native'
 import React, {useState, useContext} from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 import {Ionicons} from "@expo/vector-icons";
@@ -87,6 +98,8 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
             locations={[0.3, 1]}
             style={styles.container}
         >
+            <StatusBar barStyle="white-content" backgroundColor="#1a1a1a"/>
+
             <KeyboardAvoidingView 
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardAvoidingView}
@@ -193,7 +206,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         padding: 24,
-        paddingTop: 50,
+        paddingTop: 10,
         paddingBottom: 120,
     },
     logo: {
