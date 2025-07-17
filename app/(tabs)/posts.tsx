@@ -5,7 +5,7 @@ import {
     ActivityIndicator,
     RefreshControl,
     FlatList,
-    ListRenderItemInfo, SafeAreaView,
+    ListRenderItemInfo, SafeAreaView, StatusBar,
 } from 'react-native';
 import PostItem from '@/components/post/PostItem';
 import { ThemedText } from '@/components/ThemedText';
@@ -93,6 +93,7 @@ export default function PostsScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
             <View style={styles.header}>
                 <ThemedText style={styles.headerTitle}>🏋️ Aktualności</ThemedText>
                 <ThemedText style={styles.headerSubtitle}>
@@ -118,12 +119,12 @@ export default function PostsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1},
+    container: { flex: 1, backgroundColor: '#fff' },
     header: {
-        paddingTop: 10,
         paddingBottom: 10,
     },
     headerTitle: {
+        paddingTop: 10,
         fontSize: 28,
         fontWeight: 'bold',
         color: '#ffb300',

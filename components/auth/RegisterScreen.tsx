@@ -98,7 +98,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
             locations={[0.3, 1]}
             style={styles.container}
         >
-            <StatusBar barStyle="white-content" backgroundColor="#1a1a1a"/>
+            <StatusBar barStyle="light-content" backgroundColor="#1a1a1a"/>
 
             <KeyboardAvoidingView 
                 behavior={Platform.OS === "ios" ? "padding" : "height"}

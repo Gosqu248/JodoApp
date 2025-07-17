@@ -1,19 +1,22 @@
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, StatusBar, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
-import React, { useContext, useState } from 'react'
+import React, { useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { AuthContext } from '@/context/AuthContext';
+import {ResetCodeParams, resetPassword, ResetPasswordParams, sendResetPasswordEmail, verifyResetCode} from "@/api/auth";
 
 interface ResetPasswordScreenProps {
     onBackToLogin: () => void;
 }
 
 export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScreenProps) {
-    const { resetPassword } = useContext(AuthContext);
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [resetSent, setResetSent] = useState(false);
+    const [code, setCode] = useState('');
+    const [isValidCode, setIsValidCode] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
     const validateEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,17 +36,70 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
 
         setIsLoading(true);
         try {
-            const success = await resetPassword(email);
-            if (success) {
+            const response = await sendResetPasswordEmail(email);
+            if (response.success) {
                 setResetSent(true);
             } else {
+                console.log(response);
                 Alert.alert('Błąd', 'Wystąpił problem podczas resetowania hasła. Spróbuj ponownie później.');
             }
         } catch (error) {
+            console.error(error);
             Alert.alert('Błąd', 'Wystąpił problem podczas resetowania hasła. Spróbuj ponownie później.');
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleVerifyCode = async () => {
+        setIsLoading(true);
+        try {
+            const params: ResetCodeParams = { email, code };
+            const response = await verifyResetCode(params);
+            if (response.success) {
+                setIsValidCode(true);
+            } else {
+                Alert.alert('Błąd', 'Nieprawidłowy kod weryfikacyjny. Spróbuj ponownie.');
+            }
+        } catch (error) {
+            Alert.alert('Błąd', 'Wystąpił problem podczas weryfikacji kodu. Spróbuj ponownie później.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleResetPasswordFinal = async () => {
+        if (!validateForm()) return;
+
+        setIsLoading(true);
+        try {
+            const params: ResetPasswordParams = { email, newPassword, confirmNewPassword };
+            const response = await resetPassword(params);
+            if (response.success) {
+                Alert.alert('Sukces', 'Hasło zostało pomyślnie zresetowane.');
+                onBackToLogin();
+            } else {
+                console.log(response);
+                Alert.alert('Błąd', 'Wystąpił problem podczas resetowania hasła. Spróbuj ponownie później.');
+            }
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Błąd', 'Wystąpił problem podczas resetowania hasła. Spróbuj ponownie później.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const validateForm = () => {
+        if (newPassword.length < 6) {
+            Alert.alert('Błąd', 'Hasło musi mieć co najmniej 6 znaków');
+            return false;
+        }
+        if (newPassword !== confirmNewPassword) {
+            Alert.alert('Błąd', 'Hasła nie są identyczne');
+            return false;
+        }
+        return true;
     };
 
     return (
@@ -72,7 +128,7 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                     <View style={styles.contentContainer}>
                         <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
 
-                        {!resetSent ? (
+                        {!resetSent && !isValidCode ? (
                             <>
                                 <Text style={styles.title}>Zapomniałeś hasła?</Text>
                                 <Text style={styles.subtitle}>
@@ -105,22 +161,87 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                                     </TouchableOpacity>
                                 </View>
                             </>
-                        ) : (
-                            <View style={styles.successContainer}>
-                                <Ionicons name="checkmark-circle" size={80} color="#ffc500" style={styles.successIcon} />
-                                <Text style={styles.successTitle}>Email wysłany!</Text>
-                                <Text style={styles.successText}>
-                                    Instrukcje resetowania hasła zostały wysłane na adres {email}.
-                                    Sprawdź swoją skrzynkę odbiorczą i postępuj zgodnie z instrukcjami.
+                        ) : resetSent && !isValidCode ? (
+                            <>
+                                <Text style={styles.title}>Kod weryfikacyjny</Text>
+                                <Text style={styles.subtitle}>
+                                    Podaj swój kod weryfikacyjny, który został wysłany na Twój adres email.
                                 </Text>
-                                <TouchableOpacity
-                                    style={styles.backToLoginButton}
-                                    onPress={onBackToLogin}
-                                >
-                                    <Text style={styles.backToLoginText}>Powrót do logowania</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+
+                                <View style={styles.formContainer}>
+                                    <View style={styles.inputContainer}>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Kod weryfikacyjny"
+                                            placeholderTextColor="#666"
+                                            value={code}
+                                            onChangeText={setCode}
+                                            keyboardType="numeric"
+                                            autoCapitalize="none"
+                                            editable={!isLoading}
+                                        />
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={[styles.resetButton, isLoading && styles.buttonDisabled]}
+                                        onPress={handleVerifyCode}
+                                        disabled={isLoading}
+                                    >
+                                        <Text style={styles.resetButtonText}>
+                                            {isLoading ? 'Wysyłanie...' : 'Wprowadź kod'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.title}>Kod weryfikacyjny</Text>
+                                <Text style={styles.subtitle}>
+                                    Podaj swój kod weryfikacyjny, który został wysłany na Twój adres email.
+                                </Text>
+
+                                <View style={styles.formContainer}>
+                                    <View style={styles.inputContainer}>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Nowe hasło"
+                                            placeholderTextColor="#666"
+                                            value={newPassword}
+                                            onChangeText={setNewPassword}
+                                            keyboardType="default"
+                                            secureTextEntry
+                                            autoCapitalize="none"
+                                            editable={!isLoading}
+                                        />
+                                    </View>
+                                    <View style={styles.inputContainer}>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Powtórz hasło"
+                                            placeholderTextColor="#666"
+                                            value={confirmNewPassword}
+                                            onChangeText={setConfirmNewPassword}
+                                            keyboardType="default"
+                                            secureTextEntry
+                                            autoCapitalize="none"
+                                            editable={!isLoading}
+                                        />
+                                    </View>
+
+
+                                    <TouchableOpacity
+                                        style={[styles.resetButton, isLoading && styles.buttonDisabled]}
+                                        onPress={handleResetPasswordFinal}
+                                        disabled={isLoading}
+                                    >
+                                        <Text style={styles.resetButtonText}>
+                                            {isLoading ? 'Wysyłanie...' : 'Zmień hasło'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )
+                        }
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
