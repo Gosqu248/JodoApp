@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from "expo-secure-store";
-import { refreshToken as apiRefreshToken, logout as apiLogout } from '@/api/auth';
 import { apiUrl } from '@/api/apiUrl';
+import { RefreshResponse } from '@/types/RefreshResponse';
 
 const apiBaseUrl = apiUrl;
 
@@ -19,10 +19,33 @@ export const privateApi = axios.create({
     },
 });
 
+const refreshTokenInternal = async (): Promise<string> => {
+    const refresh = await SecureStore.getItemAsync("refreshToken");
+    if (!refresh) throw new Error("No refresh token available");
+
+    const { data } = await publicApi.post<RefreshResponse>("/auth/refresh-token", {}, {
+        headers: {
+            'Authorization': `Bearer ${refresh}`
+        }
+    });
+
+    await SecureStore.setItemAsync("accessToken", data.accessToken);
+    await SecureStore.setItemAsync("refreshToken", data.refreshToken);
+    return data.accessToken;
+};
+
+const logoutInternal = async (): Promise<void> => {
+    await SecureStore.deleteItemAsync("accessToken");
+    await SecureStore.deleteItemAsync("refreshToken");
+    await SecureStore.deleteItemAsync("user");
+};
+
 privateApi.interceptors.request.use(async config => {
     const token = await SecureStore.getItemAsync('accessToken');
     if (token) {
         config.headers!['Authorization'] = `Bearer ${token}`;
+    } else {
+        return
     }
 
     if (config.data instanceof FormData) {
@@ -39,11 +62,11 @@ privateApi.interceptors.response.use(
         if (error.response?.status === 401 && !original._retry) {
             original._retry = true;
             try {
-                const newToken = await apiRefreshToken();
+                const newToken = await refreshTokenInternal();
                 original.headers['Authorization'] = `Bearer ${newToken}`;
                 return privateApi(original);
             } catch (refreshError) {
-                await apiLogout();
+                await logoutInternal();
                 return Promise.reject(refreshError);
             }
         }
