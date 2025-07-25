@@ -101,7 +101,6 @@ export default function PostsScreen() {
                 </ThemedText>
             </View>
 
-
             <FlatList
                 data={posts}
                 renderItem={renderItem}

@@ -242,7 +242,7 @@ export default function UserSetupScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff'
+        backgroundColor: '#fff',
     },
     scrollContainer: {
         padding: 20,
@@ -393,7 +393,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#ffc500',
         borderRadius: 12,
         padding: 16,
-        marginTop: 10
+        marginTop: 10,
+        marginBottom: 40
     },
     submitButtonDisabled: {
         backgroundColor: '#ccc'
