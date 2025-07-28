@@ -48,6 +48,13 @@ export default function RootLayout() {
                                 headerShown: true,
                             }}
                         />
+                        <Stack.Screen
+                            name="schedule"
+                            options={{
+                                title: 'Harmonogram zajęć',
+                                headerShown: true,
+                            }}
+                        />
                     </Stack>
                     <StatusBar style="auto" />
                 </ThemeProvider>

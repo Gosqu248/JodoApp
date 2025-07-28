@@ -2,8 +2,8 @@ import React, {createContext, useState, useEffect, ReactNode, useContext} from '
 import * as SecureStore from 'expo-secure-store';
 import { User } from '@/types/User';
 import {AuthResponse} from "@/types/AuthResponse";
-import { login as doLogin, register as doRegister, logout as doLogout, refreshToken as doRefreshToken } from '@/api/auth';
-
+import { login as doLogin, register as doRegister, logout as doLogout} from '@/api/auth';
+import { refreshTokenInternal as doRefreshToken } from '@/api/client';
 
 interface AuthContextValue {
     user: User | null;

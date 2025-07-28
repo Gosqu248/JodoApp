@@ -171,6 +171,16 @@ export default function UserProfileScreen() {
                     )}
                 </View>
 
+                {/* Przycisk zajęć */}
+                <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={() => router.push('/schedule')}
+                >
+                    <Ionicons name="fitness-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Harmonogram zajęć</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+
                 {/* Przycisk aktywności */}
                 <TouchableOpacity
                     style={styles.activityButton}

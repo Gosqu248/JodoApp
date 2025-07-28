@@ -2,7 +2,6 @@ import {User} from "@/types/User";
 import {AuthResponse} from "@/types/AuthResponse";
 import {publicApi} from "@/api/client";
 import * as SecureStore from "expo-secure-store";
-import {RefreshResponse} from "@/types/RefreshResponse";
 import {ResultResponse} from "@/types/ResultResponse";
 
 export type LoginParams = { email: string, password: string};
@@ -22,21 +21,6 @@ export const login = async (params: LoginParams): Promise<AuthResponse> => {
 export const register = async (params: RegisterParams): Promise<User> => {
     const { data } = await publicApi.post<User>("/auth/register", params);
     return data;
-};
-
-export const refreshToken = async (): Promise<string> => {
-    const refresh = await SecureStore.getItemAsync("refreshToken");
-    if (!refresh) throw new Error("No refresh token available");
-
-    const { data } = await publicApi.post<RefreshResponse>("/auth/refresh-token", {}, {
-        headers: {
-            'Authorization': `Bearer ${refresh}`
-        }
-    });
-
-    await SecureStore.setItemAsync("accessToken", data.accessToken);
-    await SecureStore.setItemAsync("refreshToken", data.refreshToken);
-    return data.accessToken;
 };
 
 export const sendResetPasswordEmail = async (email: string): Promise<ResultResponse> => {
