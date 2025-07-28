@@ -9,7 +9,7 @@ export type UpdateUserInfoParams = {
 };
 
 export const getUserInfo = async (): Promise<UserInfo> => {
-    const { data } = await privateApi.get<UserInfo>('/user/info');
+    const { data } = await privateApi.get<UserInfo>('/users/info');
     return data;
 };
 

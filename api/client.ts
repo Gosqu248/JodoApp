@@ -19,7 +19,7 @@ export const privateApi = axios.create({
     },
 });
 
-const refreshTokenInternal = async (): Promise<string> => {
+export const refreshTokenInternal = async (): Promise<string> => {
     const refresh = await SecureStore.getItemAsync("refreshToken");
     if (!refresh) throw new Error("No refresh token available");
 
@@ -44,10 +44,7 @@ privateApi.interceptors.request.use(async config => {
     const token = await SecureStore.getItemAsync('accessToken');
     if (token) {
         config.headers!['Authorization'] = `Bearer ${token}`;
-    } else {
-        return
     }
-
     if (config.data instanceof FormData) {
         delete config.headers!['Content-Type'];
     }
