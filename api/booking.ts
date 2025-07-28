@@ -1,5 +1,5 @@
 import {Booking} from "@/types/Booking";
-import {publicApi} from "@/api/client";
+import {publicApi, privateApi} from "@/api/client";
 
 export interface ClassBookingRequest {
     classScheduleId: string;
@@ -7,8 +7,8 @@ export interface ClassBookingRequest {
     yearWeek: string;
 }
 
-export const getUserBookings = async (userId: string): Promise<Booking[]> => {
-    const response = await publicApi.get(`/bookings/user/${userId}`);
+export const getUserBookings = async (): Promise<Booking[]> => {
+    const response = await privateApi.get(`/bookings/user`);
     return response.data;
 };
 
@@ -18,5 +18,5 @@ export const createClassBooking = async (request: ClassBookingRequest): Promise<
 };
 
 export const cancelClassBooking = async (classBookingId: string, userId: string): Promise<void> => {
-    await publicApi.delete(`/class-bookings/${classBookingId}/${userId}`);
+    await publicApi.delete(`/bookings/${classBookingId}/${userId}`);
 };

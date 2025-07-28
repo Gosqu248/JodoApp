@@ -142,7 +142,7 @@ export default function ScheduleScreen() {
 
     const isClassBooked = (classId: string): boolean => {
         return userBookings.some(
-            booking => booking.schedule.id === classId && !booking.isCancelled
+            booking => booking.schedule.id === classId
         );
     };
 
