@@ -74,7 +74,7 @@ export default function ScheduleScreen() {
         try {
             const [scheduleData, bookingsData] = await Promise.all([
                 getCurrentWeekSchedule(),
-                getUserBookings(user.id),
+                getUserBookings(),
             ]);
             setWeeklySchedule(scheduleData);
             setUserBookings(bookingsData);

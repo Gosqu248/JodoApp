@@ -176,7 +176,7 @@ export default function UserProfileScreen() {
                     style={styles.activityButton}
                     onPress={() => router.push('/schedule')}
                 >
-                    <Ionicons name="fitness-outline" size={24} color="#000" />
+                    <Ionicons name="calendar-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Harmonogram zajęć</Text>
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
@@ -191,6 +191,15 @@ export default function UserProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
 
+                {/* Przycisk rankingu */}
+                <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={() => router.push('/ranking')}
+                >
+                    <Ionicons name="trophy-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Ranking</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
 
                 {/* Sekcja informacji osobistych */}
                 <View style={styles.personalInfoSection}>
