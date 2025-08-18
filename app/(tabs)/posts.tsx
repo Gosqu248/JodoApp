@@ -77,7 +77,7 @@ export default function PostsScreen() {
             id={item.id}
             title={item.title}
             description={item.content}
-            photo={{ uri: `${apiUrl}/posts/photo/${item.id}` }}
+            photo={{ uri: `${apiUrl}/posts/${item.id}/photo` }}
             createdDate={item.createdDate}
             type={item.postType}
         />

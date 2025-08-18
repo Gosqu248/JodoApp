@@ -73,7 +73,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             if (storedRefresh) {
                 try {
                     setLoading(true);
-                    console.log('Attempting token refresh...');
                     await doRefreshToken();
                     if (storedUser) setUser(JSON.parse(storedUser));
                     console.log('Token refresh successful');

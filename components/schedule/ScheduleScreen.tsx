@@ -48,7 +48,7 @@ export default function ScheduleScreen() {
     };
 
     const getWeekDateRange = (yearWeek: string): string => {
-        const [year, weekStr] = yearWeek.split('-W');
+        const [year, weekStr] = yearWeek.split('-');
         const weekNum = parseInt(weekStr);
 
         const jan4 = new Date(parseInt(year), 0, 4);
@@ -140,6 +140,31 @@ export default function ScheduleScreen() {
         );
     };
 
+    const isClassInPast = (classItem: Schedule, yearWeek?: string | null): boolean => {
+        if (!yearWeek) {
+            return false;
+        }
+
+        const [year, weekStr] = yearWeek.split('-');
+        const weekNum = parseInt(weekStr);
+
+        const dayIndex = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'].indexOf(classItem.dayOfWeek);
+        if (dayIndex === -1) return false;
+
+        const jan4 = new Date(Number(year), 0, 4);
+        const jan4Day = jan4.getDay() || 7;
+        const monday = new Date(jan4);
+        monday.setDate(jan4.getDate() - jan4Day + 1 + (weekNum - 1) * 7);
+
+        const classDate = new Date(monday);
+        classDate.setDate(classDate.getDate() + dayIndex);
+
+        const [hours, minutes] = classItem.startTime.split(':');
+        classDate.setHours(Number(hours), Number(minutes), 0, 0);
+
+        return classDate.getTime() < new Date().getTime();
+    };
+
     const isClassBooked = (classId: string): boolean => {
         return userBookings.some(
             booking => booking.schedule.id === classId
@@ -196,11 +221,13 @@ export default function ScheduleScreen() {
                     <ScheduleTab
                         weeklySchedule={weeklySchedule}
                         userBookings={userBookings}
+                        isClassInPast={isClassInPast}
                         onClassPress={handleClassPress}
                     />
                 ) : (
                     <BookingsTab
                         userBookings={userBookings}
+                        isClassInPast={isClassInPast}
                         onCancelBooking={handleCancelBooking}
                     />
                 )}

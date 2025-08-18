@@ -5,5 +5,6 @@ export interface Booking {
     schedule: Schedule;
     yearWeek: string;
     bookingDate: string;
-    scheduleDate: string;
+    isCancelled: boolean;
+    classDate: string;
 }

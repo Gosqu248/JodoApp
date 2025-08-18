@@ -6,9 +6,11 @@ import {
     StyleSheet,
 } from 'react-native';
 import { Booking } from "@/types/Booking";
+import {Schedule} from "@/types/Schedule";
 
 interface BookingsTabProps {
     userBookings: Booking[];
+    isClassInPast: (classItem: Schedule, yearWeek: string | null) => boolean;
     onCancelBooking: (bookingId: string) => void;
 }
 
@@ -21,10 +23,8 @@ const DAYS_PL = {
 };
 
 
-export default function BookingsTab({ userBookings, onCancelBooking }: BookingsTabProps) {
-    const sortedBookings = [...userBookings].sort(
-        (a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime()
-    );
+export default function BookingsTab({ userBookings, isClassInPast, onCancelBooking }: BookingsTabProps) {
+    const sortedBookings = [...userBookings]
 
     return (
         <View style={styles.bookingsContainer}>
@@ -37,23 +37,16 @@ export default function BookingsTab({ userBookings, onCancelBooking }: BookingsT
                     <View key={booking.id} style={styles.bookingCard}>
                         <View style={styles.bookingHeader}>
                             <Text style={styles.bookingClassName}>{booking.schedule.name}</Text>
-
-                            <View style={[
-                                styles.statusBadge,
-                                booking.isCancelled ? styles.statusCANCELLED : styles.statusACTIVE
-                            ]}>
-                                <Text style={[
-                                    styles.statusText,
-                                    booking.isCancelled ? styles.statusCANCELLEDText : styles.statusACTIVEText
-                                ]}>
-                                    {booking.isCancelled ? 'Anulowany' : 'Aktywny'}
+                            <View>
+                                <Text>
+                                    {'Aktywny'}
                                 </Text>
                             </View>
                         </View>
                         <Text style={styles.bookingDate}>
-                            {DAYS_PL[booking.schedule.dayOfWeek as keyof typeof DAYS_PL]}: {new Date(booking.scheduleDate).toLocaleDateString('pl-PL')}
+                            {DAYS_PL[booking.schedule.dayOfWeek as keyof typeof DAYS_PL]}: {new Date(booking.classDate).toLocaleDateString('pl-PL')}
                         </Text>
-                        {!booking.isCancelled && (
+                        { !isClassInPast(booking.schedule, booking.yearWeek) && (
                             <TouchableOpacity
                                 style={styles.cancelButton}
                                 onPress={() => onCancelBooking(booking.id)}
@@ -61,7 +54,9 @@ export default function BookingsTab({ userBookings, onCancelBooking }: BookingsT
                             >
                                 <Text style={styles.cancelButtonText}>Anuluj rezerwację</Text>
                             </TouchableOpacity>
-                        )}
+                        )
+                        }
+
                     </View>
                 ))
             )}

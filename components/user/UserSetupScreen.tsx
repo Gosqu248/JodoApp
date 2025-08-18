@@ -22,6 +22,7 @@ export default function UserSetupScreen() {
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [birthDate, setBirthDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export default function UserSetupScreen() {
             await updateUserInfo({
                 firstName: firstName.trim(),
                 lastName: lastName.trim(),
+                phoneNumber: phoneNumber.trim(),
                 birthDate: birthDate.toISOString(),
                 profileImageUri: profileImage!,
             });
@@ -142,6 +144,17 @@ export default function UserSetupScreen() {
                                 placeholder="Wprowadź swoje nazwisko"
                                 value={lastName}
                                 onChangeText={setLastName}
+                                autoCapitalize="words"
+                            />
+                        </View>
+
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.inputLabel}>Numer Telefonu *</Text>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="Wprowadź swój numer telefonu"
+                                value={phoneNumber}
+                                onChangeText={setPhoneNumber}
                                 autoCapitalize="words"
                             />
                         </View>
