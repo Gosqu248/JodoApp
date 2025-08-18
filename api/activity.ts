@@ -12,13 +12,6 @@ export const endActivity = async (activityId: string): Promise<ActivityResponse>
     return response.data;
 };
 
-export const getDailyStats = async (userId: string, date: string): Promise<ActivityStatus> => {
-    const response = await publicApi.get(`/activities/daily/${userId}`, {
-        params: { date }
-    });
-    return response.data;
-};
-
 export const getWeeklyStats = async (userId: string, startDate: string): Promise<ActivityStatus> => {
     const response = await publicApi.get(`/activities/weekly/${userId}`, {
         params: { startDate }
@@ -32,6 +25,11 @@ export const getMonthlyStats = async (userId: string, startDate: string): Promis
     });
     return response.data;
 };
+
+export const getTotalActivity = async (userId: string): Promise<ActivityStatus> => {
+    const response = await publicApi.get(`/activities/total/${userId}`);
+    return response.data;
+}
 
 export const getUsersOnGym = async (): Promise<number> => {
     const response = await publicApi.get(`/activities/users`);

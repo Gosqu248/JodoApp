@@ -38,11 +38,13 @@ export const UserProvider = ({ children }: UserProviderProps) => {
 
     const refreshUserInfo = async () => {
         setLoading(true);
-        try {
-            const data = await fetchUserInfo();
-            setUserInfo(data);
-        } finally {
-            setLoading(false);
+        if (user) {
+            try {
+                const data = await fetchUserInfo();
+                setUserInfo(data);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 

@@ -13,16 +13,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ActivityStatus } from '@/types/ActivityStatus';
-import {getDailyStats, getWeeklyStats, getMonthlyStats, getUsersOnGym} from '@/api/activity';
+import { getWeeklyStats, getMonthlyStats, getTotalActivity, getUsersOnGym} from '@/api/activity';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
 import { formatDuration } from '@/utils/timeUtils';
 import { useFocusEffect } from '@react-navigation/native';
 
-type StatsType = 'daily' | 'weekly' | 'monthly';
+type StatsType = 'weekly' | 'monthly' | 'total';
 
 export default function ActivityScreen() {
     const { user } = useAuth();
-    const [selectedStats, setSelectedStats] = useState<StatsType>('daily');
+    const [selectedStats, setSelectedStats] = useState<StatsType>('weekly');
     const [activityStatus, setActivityStatus] = useState<ActivityStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -73,11 +73,10 @@ export default function ActivityScreen() {
         if (!user?.id) return;
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
             let stats: ActivityStatus;
 
-            if (selectedStats === 'daily') {
-                stats = await getDailyStats(user.id, today);
+            if (selectedStats === 'total') {
+                stats = await getTotalActivity(user.id);
             } else if (selectedStats === 'weekly') {
                 const weekStart = getWeekStart(new Date()).toISOString().split('T')[0];
                 stats = await getWeeklyStats(user.id, weekStart);
@@ -122,7 +121,7 @@ export default function ActivityScreen() {
         new Date(date.getFullYear(), date.getMonth(), 1);
 
     const getStatsTitle = () => {
-        if (selectedStats === 'daily') return 'Dzisiaj';
+        if (selectedStats === 'total') return 'Łączna aktywność';
         if (selectedStats === 'weekly') return 'Ten tydzień';
         return 'Ten miesiąc';
     };
@@ -221,7 +220,7 @@ export default function ActivityScreen() {
                 )}
 
                 <View style={styles.periodSelector}>
-                    {(['daily', 'weekly', 'monthly'] as StatsType[]).map((period) => (
+                    {(['weekly', 'monthly', 'total'] as StatsType[]).map((period) => (
                         <TouchableOpacity
                             key={period}
                             style={[
@@ -236,8 +235,8 @@ export default function ActivityScreen() {
                                     selectedStats === period && styles.periodButtonTextActive
                                 ]}
                             >
-                                {period === 'daily'
-                                    ? 'Dzień'
+                                {period === 'total'
+                                    ? 'Łącznie'
                                     : period === 'weekly'
                                         ? 'Tydzień'
                                         : 'Miesiąc'}

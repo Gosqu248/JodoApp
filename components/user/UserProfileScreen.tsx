@@ -15,8 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
 import { getMembership } from '@/api/membership';
 import { Membership } from '@/types/Membership';
-import { apiUrl } from '@/api/apiUrl';
 import { useRouter } from 'expo-router';
+import { getUserPhoto } from '@/api/user';
 
 export default function UserProfileScreen() {
     const { user, logout } = useContext(AuthContext);
@@ -28,19 +28,15 @@ export default function UserProfileScreen() {
     const router = useRouter();
 
     useEffect(() => {
-        if (userInfo?.id) {
-            const uri = `${apiUrl}/user/${userInfo.id}/photo`;
-            fetch(uri)
-                .then(res => {
-                    if (res.ok) {
-                        setPhotoUri(uri);
-                    } else {
-                        setPhotoUri(null);
-                    }
+        if (user?.id) {
+            setPhotoLoading(true);
+            getUserPhoto(user.id)
+                .then(uri => {
+                    setPhotoUri(uri);
                 })
                 .finally(() => setPhotoLoading(false));
         }
-    }, [userInfo]);
+    }, [user]);
 
     useEffect(() => {
         const fetchMembership = async () => {
@@ -82,6 +78,17 @@ export default function UserProfileScreen() {
     const handleSettingsPress = () => {
         console.log('Przejdź do ustawień');
     };
+
+    const formatPhoneNumber = (number: string) => {
+        const cleaned = number.replace(/\D/g, '');
+
+        const chunks = [];
+        for (let i = 0; i < cleaned.length; i += 3) {
+            chunks.push(cleaned.slice(i, i + 3));
+        }
+
+        return chunks.join(' ');
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -176,7 +183,7 @@ export default function UserProfileScreen() {
                     style={styles.activityButton}
                     onPress={() => router.push('/schedule')}
                 >
-                    <Ionicons name="fitness-outline" size={24} color="#000" />
+                    <Ionicons name="calendar-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Harmonogram zajęć</Text>
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
@@ -191,6 +198,24 @@ export default function UserProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
 
+                {/* Przycisk rankingu */}
+                <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={() => router.push('/ranking')}
+                >
+                    <Ionicons name="trophy-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Ranking</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={() => router.push('/membershipTypes')}
+                >
+                    <Ionicons name="card-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Dostępne karnety</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
 
                 {/* Sekcja informacji osobistych */}
                 <View style={styles.personalInfoSection}>
@@ -201,6 +226,14 @@ export default function UserProfileScreen() {
                             <View style={styles.infoContent}>
                                 <Text style={styles.infoLabel}>Email</Text>
                                 <Text style={styles.infoValue}>{user.email}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.divider} />
+                        <View style={styles.infoRow}>
+                            <Ionicons name="mail-outline" size={22} color="#000" />
+                            <View style={styles.infoContent}>
+                                <Text style={styles.infoLabel}>Numer Telefonu</Text>
+                                <Text style={styles.infoValue}>{formatPhoneNumber(userInfo.phoneNumber)}</Text>
                             </View>
                         </View>
                         <View style={styles.divider} />

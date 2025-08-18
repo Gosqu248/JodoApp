@@ -55,6 +55,20 @@ export default function RootLayout() {
                                 headerShown: true,
                             }}
                         />
+                        <Stack.Screen
+                            name="ranking"
+                            options={{
+                                title: 'Ranking',
+                                headerShown: true,
+                            }}
+                        />
+                        <Stack.Screen
+                            name="membershipTypes"
+                            options={{
+                                title: 'Dostępne karnety',
+                                headerShown: true,
+                            }}
+                        />
                     </Stack>
                     <StatusBar style="auto" />
                 </ThemeProvider>

@@ -22,6 +22,7 @@ const DAYS_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
 interface ScheduleTabProps {
     weeklySchedule: WeeklySchedule | null;
     userBookings: Booking[];
+    isClassInPast: (classItem: Schedule, yearWeek?: string | null) => boolean;
     onClassPress: (classItem: Schedule) => void;
 }
 
@@ -30,10 +31,10 @@ const formatTime = (timeString: string): string => {
     return `${hours}:${minutes}`;
 };
 
-export default function ScheduleTab({ weeklySchedule, userBookings, onClassPress }: ScheduleTabProps) {
+export default function ScheduleTab({ weeklySchedule, userBookings, isClassInPast, onClassPress }: ScheduleTabProps) {
     const isClassBooked = (classId: string): boolean => {
         return userBookings.some(
-            booking => booking.schedule.id === classId && !booking.isCancelled
+            booking => booking.schedule.id === classId && booking.yearWeek === weeklySchedule?.yearWeek
         );
     };
 
@@ -55,10 +56,12 @@ export default function ScheduleTab({ weeklySchedule, userBookings, onClassPress
                             key={classItem.id}
                             style={[
                                 styles.classCard,
-                                isClassBooked(classItem.id) && styles.bookedClassCard
+                                isClassBooked(classItem.id) && styles.bookedClassCard,
+                                isClassInPast(classItem, weeklySchedule?.yearWeek) && styles.pastClassCard
                             ]}
                             onPress={() => onClassPress(classItem)}
                             activeOpacity={0.7}
+                            disabled={isClassInPast(classItem, weeklySchedule?.yearWeek)}
                         >
                             <View style={styles.classContent}>
                                 <View style={styles.classHeader}>
@@ -153,6 +156,10 @@ const styles = StyleSheet.create({
     bookedClassCard: {
         borderLeftWidth: 6,
         borderLeftColor: '#FFD700',
+    },
+    pastClassCard: {
+        backgroundColor: '#E0E0E0',
+        opacity: 0.6,
     },
     classContent: {
         padding: 16,
