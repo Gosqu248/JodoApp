@@ -1,0 +1,237 @@
+import React from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MembershipType } from "@/types/MembershipType";
+
+
+export default function TypeItem({ membershipType }: MembershipType) {
+
+    const duration = (durationMonths: number, durationWeeks: number): string => {
+       if (durationMonths === 0 && durationWeeks === 0) {
+           return "Jednorazowy dostęp";
+       }
+
+        const monthsText = formatMonths(durationMonths);
+        const weeksText = formatWeeks(durationWeeks);
+
+        if (monthsText && weeksText) {
+            return `${monthsText} i ${weeksText}`;
+        }
+
+        return monthsText || weeksText;
+    }
+
+    const formatMonths = (months: number): string => {
+        if (months === 0) {
+            return '';
+        } else if (months === 1) {
+            return '1 miesiąc';
+        } else {
+            return `${months} miesiące`;
+        }
+    }
+
+    const formatWeeks = (weeks: number): string => {
+        if (weeks === 0) {
+            return '';
+        } else if (weeks === 1) {
+            return '1 tydzień';
+        } else {
+            return `${weeks} tygodnie`;
+        }
+    };
+
+    const formatPrice = (price: number): string => {
+        return price.toLocaleString('pl-PL', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        });
+    };
+
+    const getTypeIcon = (): keyof typeof Ionicons.glyphMap => {
+        const isOneTime = (!membershipType.durationMonths || membershipType.durationMonths === 0) &&
+            (!membershipType.durationWeeks || membershipType.durationWeeks === 0);
+
+        if (isOneTime) {
+            return 'enter';
+        } else if (membershipType.withExercises) {
+            return 'trophy';
+        } else {
+            return 'fitness';
+        }
+    };
+
+    const getGradientColors = (): string[] => {
+        const isOneTime = (!membershipType.durationMonths || membershipType.durationMonths === 0) &&
+            (!membershipType.durationWeeks || membershipType.durationWeeks === 0);
+
+        if (isOneTime) {
+            return ['#4CAF50', '#45a049']; // Green for one-time
+        } else if (membershipType.withExercises) {
+            return ['#ffd500', '#ff9000']; // Gold for OPEN
+        } else {
+            return ['#2196F3', '#1976D2']; // Blue for gym-only
+        }
+    };
+
+    return (
+        <TouchableOpacity
+            style={styles.container}
+            activeOpacity={0.8}
+        >
+            <View style={styles.card}>
+                {/* Header with icon and price */}
+                { membershipType.isLimited && (
+                    <View style={styles.limitedContainer}>
+                        <Text style={styles.limitedText}>Oferta limitowana</Text>
+                    </View>
+                )}
+                <LinearGradient
+                    colors={['#ffffff', '#f8f9fa']}
+                    style={styles.cardGradient}
+                >
+                    <View style={styles.header}>
+                        <View style={styles.iconContainer}>
+                            <LinearGradient
+                                colors={getGradientColors()}
+                                style={styles.iconGradient}
+                            >
+                                <Ionicons
+                                    name={getTypeIcon()}
+                                    size={24}
+                                    color="#ffffff"
+                                />
+                            </LinearGradient>
+                        </View>
+
+                        <View style={styles.priceContainer}>
+                            <Text style={styles.priceValue}>{formatPrice(membershipType.price)}</Text>
+                            <Text style={styles.priceCurrency}>zł</Text>
+                        </View>
+                    </View>
+
+                    {/* Content */}
+                    <View style={styles.content}>
+                        <Text style={styles.name}>{membershipType.name}</Text>
+                        <Text style={styles.duration}>
+                            {duration(membershipType.durationMonths, membershipType.durationWeeks)}
+                        </Text>
+
+                        {membershipType.withExercises && (
+                            <View style={styles.featureContainer}>
+                                <View style={styles.feature}>
+                                    <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                                    <Text style={styles.featureText}>Dostęp do zajęć grupowych</Text>
+                                </View>
+                            </View>
+                        )}
+
+                        <View style={styles.featureContainer}>
+                            <View style={styles.feature}>
+                                <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                                <Text style={styles.featureText}>Dostęp do siłowni</Text>
+                            </View>
+                        </View>
+                    </View>
+                </LinearGradient>
+            </View>
+        </TouchableOpacity>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        marginBottom: 4
+    },
+    card: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#ffd500'
+    },
+    limitedContainer: {
+        backgroundColor: '#f8b30d',
+        padding: 8,
+        color: '#fff',
+        alignItems: 'center'
+    },
+    limitedText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 18
+    },
+    cardGradient: {
+        padding: 20
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16
+    },
+    iconContainer: {
+        borderRadius: 12,
+        overflow: 'hidden'
+    },
+    iconGradient: {
+        width: 48,
+        height: 48,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    priceContainer: {
+        flexDirection: 'row',
+        alignItems: 'baseline'
+    },
+    priceValue: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#000'
+    },
+    priceCurrency: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#666',
+        marginLeft: 4
+    },
+    content: {
+        marginBottom: 0
+    },
+    name: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#000',
+        marginBottom: 6
+    },
+    duration: {
+        fontSize: 16,
+        color: '#666',
+        fontWeight: '500',
+        marginBottom: 12
+    },
+    featureContainer: {
+        marginBottom: 6
+    },
+    feature: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    featureText: {
+        fontSize: 14,
+        color: '#4CAF50',
+        fontWeight: '500',
+        marginLeft: 8
+    },
+
+});

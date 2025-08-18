@@ -208,6 +208,15 @@ export default function UserProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
 
+                <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={() => router.push('/membershipTypes')}
+                >
+                    <Ionicons name="card-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Dostępne karnety</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+
                 {/* Sekcja informacji osobistych */}
                 <View style={styles.personalInfoSection}>
                     <Text style={styles.sectionTitle}>Informacje osobiste</Text>
