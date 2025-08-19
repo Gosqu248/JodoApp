@@ -9,7 +9,8 @@ import {
     StatusBar,
     TextInput,
     Alert,
-    Platform
+    Platform,
+    ActionSheetIOS
 } from 'react-native';
 import {Image} from 'expo-image';
 import {Ionicons} from '@expo/vector-icons';
@@ -34,41 +35,106 @@ export default function UserSetupScreen() {
         setBirthDate(currentDate);
     };
 
-    const pickImageFromLibrary = async () => {
-        const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Błąd', 'Potrzebujemy uprawnień do dostępu do galerii!');
-            return;
-        }
+    const requestPermissions = async () => {
+        const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+        const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
+        return {
+            camera: cameraPermission.status === 'granted',
+            mediaLibrary: mediaLibraryPermission.status === 'granted'
+        };
+    };
 
-        if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
+    const showPermissionAlert = () => {
+        Alert.alert(
+            'Brak uprawnień',
+            'Aby dodać zdjęcie profilowe, musisz nadać uprawnienia do aparatu lub galerii.',
+            [{ text: 'OK' }]
+        );
+    };
+
+    const pickImageFromCamera = async () => {
+        try {
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setProfileImage(result.assets[0].uri);
+            }
+        } catch (error) {
+            Alert.alert('Błąd', 'Nie udało się zrobić zdjęcia');
         }
     };
 
-    const takePhoto = async () => {
-        const {status} = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Błąd', 'Potrzebujemy uprawnień do kamery!');
-            return;
+    const pickImageFromGallery = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setProfileImage(result.assets[0].uri);
+            }
+        } catch (error) {
+            Alert.alert('Błąd', 'Nie udało się wybrać zdjęcia');
         }
+    };
 
-        const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
+    const showImagePicker = async () => {
+        const permissions = await requestPermissions();
 
-        if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Anuluj', 'Aparat', 'Galeria'],
+                    cancelButtonIndex: 0,
+                    title: 'Wybierz źródło zdjęcia'
+                },
+                (buttonIndex) => {
+                    if (buttonIndex === 1 && permissions.camera) {
+                        pickImageFromCamera();
+                    } else if (buttonIndex === 2 && permissions.mediaLibrary) {
+                        pickImageFromGallery();
+                    } else if (buttonIndex !== 0) {
+                        showPermissionAlert();
+                    }
+                }
+            );
+        } else {
+            Alert.alert(
+                'Wybierz źródło zdjęcia',
+                'Skąd chcesz wybrać zdjęcie?',
+                [
+                    { text: 'Anuluj', style: 'cancel' },
+                    {
+                        text: 'Aparat',
+                        onPress: () => {
+                            if (permissions.camera) {
+                                pickImageFromCamera();
+                            } else {
+                                showPermissionAlert();
+                            }
+                        }
+                    },
+                    {
+                        text: 'Galeria',
+                        onPress: () => {
+                            if (permissions.mediaLibrary) {
+                                pickImageFromGallery();
+                            } else {
+                                showPermissionAlert();
+                            }
+                        }
+                    }
+                ]
+            );
         }
     };
 
@@ -198,29 +264,20 @@ export default function UserSetupScreen() {
                             ) : (
                                 <View style={styles.placeholderImage}>
                                     <Ionicons name="person-outline" size={60} color="#999"/>
+                                    <Text style={styles.placeholderText}>Wybierz zdjęcie</Text>
                                 </View>
                             )}
                         </View>
 
-                        <View style={styles.photoButtonsContainer}>
-                            <TouchableOpacity
-                                style={styles.photoButton}
-                                onPress={takePhoto}
-                            >
-                                <Ionicons name="camera-outline" size={20} color="#ffc500"/>
-                                <Text style={styles.photoButtonText}>Zrób zdjęcie</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.photoButton}
-                                onPress={pickImageFromLibrary}
-                            >
-                                <Ionicons name="images-outline" size={20} color="#ffc500"/>
-                                <Text style={styles.photoButtonText}>
-                                    {profileImage ? 'Zmień z galerii' : 'Dodaj z galerii'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.photoButton}
+                            onPress={showImagePicker}
+                        >
+                            <Ionicons name="camera" size={20} color="#ffc500"/>
+                            <Text style={styles.photoButtonText}>
+                                {profileImage ? 'Zmień zdjęcie' : 'Wybierz zdjęcie'}
+                            </Text>
+                        </TouchableOpacity>
 
                         <View style={styles.photoInfo}>
                             <Ionicons name="shield-checkmark-outline" size={24} color="#4CAF50"/>
@@ -332,7 +389,7 @@ const styles = StyleSheet.create({
     photoCard: {
         backgroundColor: '#fff',
         borderRadius: 16,
-        padding: 10,
+        padding: 20,
         borderWidth: 2,
         borderColor: '#ffc500',
         shadowColor: '#000',
@@ -343,12 +400,12 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     photoContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 20,
+        width: 150,
+        height: 150,
+        borderRadius: 25,
         backgroundColor: '#f0f0f0',
         marginBottom: 20,
-        overflow: 'hidden'
+        overflow: 'hidden',
     },
     profileImage: {
         width: '100%',
@@ -359,20 +416,31 @@ const styles = StyleSheet.create({
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5'
+        backgroundColor: '#f5f5f5',
+        borderWidth: 2,
+        borderColor: '#e0e0e0',
+        borderStyle: 'dashed',
+    },
+    placeholderText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 8,
+        textAlign: 'center',
     },
     photoButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#000',
-        paddingHorizontal: 10,
-        paddingVertical: 12,
-        borderRadius: 10,
-        marginBottom: 20
+        justifyContent: 'center',
+        backgroundColor: '#f8f9fa',
+        borderRadius: 12,
+        paddingVertical: 16,
+        paddingHorizontal: 50,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
     },
     photoButtonText: {
-        color: '#ffc500',
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
         marginLeft: 8
     },
@@ -383,7 +451,8 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#4CAF50'
+        borderColor: '#4CAF50',
+        width: '100%'
     },
     photoInfoText: {
         flex: 1,
@@ -391,13 +460,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#2E7D32',
         lineHeight: 20
-    },
-    photoButtonsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        width: '100%',
-        marginBottom: 10,
-        gap: 5
     },
     submitButton: {
         flexDirection: 'row',

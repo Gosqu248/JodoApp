@@ -7,24 +7,32 @@ import {
     ScrollView,
     SafeAreaView,
     StatusBar,
-    ActivityIndicator
+    ActivityIndicator,
+    Modal,
+    Animated,
+    Dimensions
 } from 'react-native';
 import { AuthContext } from '@/context/AuthContext';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
-import { getMembership } from '@/api/membership';
-import { Membership } from '@/types/Membership';
 import { useRouter } from 'expo-router';
 import { getUserPhoto } from '@/api/user';
+import ChangePasswordModal from './ChangePasswordModal';
+import ChangePhotoModal from './ChangePhotoModal';
+import { formatPhoneNumber } from '@/utils/formatters';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function UserProfileScreen() {
     const { user, logout } = useContext(AuthContext);
-    const { userInfo, loading: userLoading } = useUser();
+    const { userInfo, membership, loading: userLoading, membershipLoading } = useUser();
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(true);
-    const [membership, setMembership] = useState<Membership | null>(null);
-    const [membershipLoading, setMembershipLoading] = useState(true);
+    const [settingsVisible, setSettingsVisible] = useState(false);
+    const [changePasswordVisible, setChangePasswordVisible] = useState(false);
+    const [changePhotoVisible, setChangePhotoVisible] = useState(false);
+    const [slideAnim] = useState(new Animated.Value(SCREEN_WIDTH));
     const router = useRouter();
 
     useEffect(() => {
@@ -32,32 +40,29 @@ export default function UserProfileScreen() {
             setPhotoLoading(true);
             getUserPhoto(user.id)
                 .then(uri => {
-                    setPhotoUri(uri);
+                    if (uri) {
+                        setPhotoUri(uri);
+                    }
                 })
                 .finally(() => setPhotoLoading(false));
         }
     }, [user]);
 
     useEffect(() => {
-        const fetchMembership = async () => {
-            if (user?.id) {
-                try {
-                    setMembershipLoading(true);
-                    const membershipData = await getMembership(user.id);
-                    setMembership(membershipData);
-                } catch (error) {
-                    console.error('Błąd przy pobieraniu danych membership:', error);
-                    setMembership(null);
-                } finally {
-                    setMembershipLoading(false);
-                }
-            }
-        };
-
-        fetchMembership();
-    }, [user]);
-
-
+        if (settingsVisible) {
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        } else {
+            Animated.timing(slideAnim, {
+                toValue: SCREEN_WIDTH,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [settingsVisible]);
 
     if (userLoading || photoLoading || membershipLoading) return <ActivityIndicator />;
     if (!userInfo || !user) return null;
@@ -65,6 +70,7 @@ export default function UserProfileScreen() {
     const membershipExpiryDate = membership?.expiryDate ? new Date(membership.expiryDate) : null;
     const currentDate = new Date();
     const isActive = membership ? membership.isActive : false;
+    const isFrozen = membership ? membership.isFrozen : false;
     const daysLeft = membershipExpiryDate ?
         Math.ceil((membershipExpiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
@@ -76,19 +82,28 @@ export default function UserProfileScreen() {
         });
 
     const handleSettingsPress = () => {
-        console.log('Przejdź do ustawień');
+        setSettingsVisible(true);
     };
 
-    const formatPhoneNumber = (number: string) => {
-        const cleaned = number.replace(/\D/g, '');
+    const closeSettings = () => {
+        setSettingsVisible(false);
+    };
 
-        const chunks = [];
-        for (let i = 0; i < cleaned.length; i += 3) {
-            chunks.push(cleaned.slice(i, i + 3));
-        }
+    const handleChangePassword = () => {
+        setSettingsVisible(false);
+        setChangePasswordVisible(true);
+    };
 
-        return chunks.join(' ');
-    }
+    const handleChangePhoto = () => {
+        setSettingsVisible(false);
+        setChangePhotoVisible(true);
+    };
+
+    const handlePhotoUpdated = (newPhotoUri: string) => {
+        setPhotoUri(newPhotoUri);
+        setChangePhotoVisible(false);
+    };
+
 
     return (
         <SafeAreaView style={styles.container}>
@@ -156,7 +171,7 @@ export default function UserProfileScreen() {
                             <View
                                 style={[
                                     styles.statusButton,
-                                    { backgroundColor: isActive ? '#4CAF50' : '#F44336' }
+                                    { backgroundColor: isFrozen ? '#36b2f4' : isActive ? '#4CAF50' : '#F44336' }
                                 ]}
                             >
                                 <Ionicons
@@ -165,7 +180,7 @@ export default function UserProfileScreen() {
                                     color="#fff"
                                 />
                                 <Text style={styles.statusText}>
-                                    {isActive ? 'Aktywny' : 'Nieaktywny'}
+                                    {isFrozen ? 'Zamrożony' : isActive ? 'Aktywny' : 'Nieaktywny'}
                                 </Text>
                             </View>
                         </View>
@@ -198,6 +213,16 @@ export default function UserProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
 
+                {/* Przycisk historii zakupionych karnetów */}
+                <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={() => router.push('/purchase')}
+                >
+                    <Ionicons name="fitness-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Historia kupionych karnetów</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+
                 {/* Przycisk rankingu */}
                 <TouchableOpacity
                     style={styles.activityButton}
@@ -208,6 +233,7 @@ export default function UserProfileScreen() {
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
 
+                {/* Przycisk dostępnych karnetów */}
                 <TouchableOpacity
                     style={styles.activityButton}
                     onPress={() => router.push('/membershipTypes')}
@@ -268,6 +294,83 @@ export default function UserProfileScreen() {
                     <Text style={styles.logoutText}>Wyloguj się</Text>
                 </TouchableOpacity>
             </ScrollView>
+
+            {/* Settings Sliding Panel */}
+            <Modal
+                visible={settingsVisible}
+                transparent={true}
+                animationType="none"
+                onRequestClose={closeSettings}
+            >
+                <TouchableOpacity
+                    style={styles.overlay}
+                    activeOpacity={1}
+                    onPress={closeSettings}
+                >
+                    <Animated.View
+                        style={[
+                            styles.settingsPanel,
+                            {
+                                transform: [{ translateX: slideAnim }]
+                            }
+                        ]}
+                    >
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            style={styles.settingsPanelContent}
+                        >
+                            {/* Header panelu ustawień */}
+                            <View style={styles.settingsHeader}>
+                                <Text style={styles.settingsTitle}>Ustawienia</Text>
+                                <TouchableOpacity
+                                    style={styles.closeButton}
+                                    onPress={closeSettings}
+                                >
+                                    <Ionicons name="close" size={24} color="#000" />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Opcje ustawień */}
+                            <View style={styles.settingsOptions}>
+                                <TouchableOpacity
+                                    style={styles.settingOption}
+                                    onPress={handleChangePassword}
+                                >
+                                    <Ionicons name="lock-closed-outline" size={24} color="#000" />
+                                    <Text style={styles.settingOptionText}>Zmień hasło</Text>
+                                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                                </TouchableOpacity>
+
+                                <View style={styles.settingDivider} />
+
+                                <TouchableOpacity
+                                    style={styles.settingOption}
+                                    onPress={handleChangePhoto}
+                                >
+                                    <Ionicons name="camera-outline" size={24} color="#000" />
+                                    <Text style={styles.settingOptionText}>Zmień zdjęcie profilowe</Text>
+                                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* Change Password Modal */}
+            <ChangePasswordModal
+                visible={changePasswordVisible}
+                onClose={() => setChangePasswordVisible(false)}
+                userId={user?.id}
+            />
+
+            {/* Change Photo Modal */}
+            <ChangePhotoModal
+                visible={changePhotoVisible}
+                onClose={() => setChangePhotoVisible(false)}
+                userId={user?.id}
+                onPhotoUpdated={handlePhotoUpdated}
+            />
         </SafeAreaView>
     );
 }
@@ -389,5 +492,68 @@ const styles = StyleSheet.create({
     infoValue: { fontSize: 17, color: '#000', fontWeight: '600' },
     divider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 12 },
     logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', borderRadius: 12, padding: 16, marginTop: 10 },
-    logoutText: { color: '#ffc500', fontSize: 16, fontWeight: '600', marginLeft: 8 }
+    logoutText: { color: '#ffc500', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+
+    // Settings Panel Styles
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+    },
+    settingsPanel: {
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: SCREEN_WIDTH * 0.8,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: -2, height: 0 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 10,
+    },
+    settingsPanelContent: {
+        flex: 1,
+        paddingTop: 60,
+    },
+    settingsHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 30,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    settingsTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#000',
+    },
+    closeButton: {
+        padding: 8,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 20,
+    },
+    settingsOptions: {
+        padding: 20,
+    },
+    settingOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 12,
+    },
+    settingOptionText: {
+        fontSize: 16,
+        color: '#000',
+        marginLeft: 12,
+        flex: 1,
+    },
+    settingDivider: {
+        height: 1,
+        backgroundColor: '#e0e0e0',
+        marginHorizontal: 12,
+    },
 });

@@ -6,10 +6,9 @@ import {
     ScrollView,
     StatusBar,
     ActivityIndicator,
-    Alert
+    Alert, SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MembershipType } from "@/types/MembershipType";
 import { getActiveMembershipTypes } from "@/api/membership";
 import TypeItem from './TypeItem';
@@ -109,7 +108,7 @@ export default function TypesScreen() {
     const groupedTypes = groupMembershipTypes(membershipTypes);
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
             <ScrollView
@@ -117,23 +116,6 @@ export default function TypesScreen() {
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Hero Section */}
-                <View style={styles.heroSection}>
-                    <LinearGradient
-                        colors={['#ffd500', '#ff9000']}
-                        style={styles.heroGradient}
-                    >
-                        <View style={styles.heroContent}>
-                            <View style={styles.cardContainer}>
-                                <Ionicons name="card" size={48} color="#ffffff" />
-                            </View>
-                            <Text style={styles.heroTitle}>Dostępne Karnety</Text>
-                            <Text style={styles.heroSubtitle}>
-                                Wybierz karnet idealny dla siebie
-                            </Text>
-                        </View>
-                    </LinearGradient>
-                </View>
 
                 {/* Membership Types Sections */}
                 <View style={styles.sectionsContainer}>
@@ -171,7 +153,7 @@ export default function TypesScreen() {
                     </View>
                 )}
             </ScrollView>
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -239,6 +221,7 @@ const styles = StyleSheet.create({
         lineHeight: 24
     },
     sectionsContainer: {
+        marginTop: 24,
         paddingHorizontal: 16
     },
     section: {

@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ActivityStatus } from '@/types/ActivityStatus';
 import { getWeeklyStats, getMonthlyStats, getTotalActivity, getUsersOnGym} from '@/api/activity';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
-import { formatDuration } from '@/utils/timeUtils';
+import { formatActivityDuration } from '@/utils/formatters';
 import { useFocusEffect } from '@react-navigation/native';
 
 type StatsType = 'weekly' | 'monthly' | 'total';
@@ -49,14 +49,13 @@ export default function ActivityScreen() {
         };
     }, [currentActivity]);
 
-    // Odświeżaj statystyki gdy screen jest w fokusie
     useFocusEffect(
         useCallback(() => {
             if (user?.id) {
                 fetchOnGymCount();
                 fetchStats();
             }
-        }, [user?.id, selectedStats])
+        }, [user?.id])
     );
 
     useEffect(() => {
@@ -69,7 +68,7 @@ export default function ActivityScreen() {
         }
     }, [currentActivity, user?.id]);
 
-    const fetchStats = async () => {
+    const fetchStats = useCallback(async () => {
         if (!user?.id) return;
         setLoading(true);
         try {
@@ -92,7 +91,7 @@ export default function ActivityScreen() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user?.id, selectedStats]);
 
     const fetchOnGymCount = async () => {
         try {
@@ -193,7 +192,7 @@ export default function ActivityScreen() {
                         </View>
                         <View style={styles.currentActivityTime}>
                             <Text style={styles.currentActivityDuration}>
-                                {formatDuration(elapsedMinutes)}
+                                {formatActivityDuration(elapsedMinutes)}
                             </Text>
                             <Text style={styles.currentActivityLabel}>
                                 Rozpoczęto:{' '}
@@ -254,7 +253,7 @@ export default function ActivityScreen() {
                                 <View style={styles.statCard}>
                                     <Ionicons name="time-outline" size={32} color="#ffc500" />
                                     <Text style={styles.statValue}>
-                                        {formatDuration(activityStatus.totalMinutes)}
+                                        {formatActivityDuration(activityStatus.totalMinutes)}
                                     </Text>
                                     <Text style={styles.statLabel}>Łączny czas</Text>
                                 </View>
@@ -312,7 +311,7 @@ export default function ActivityScreen() {
                                                         styles.activityDurationText
                                                     }
                                                 >
-                                                    {formatDuration(
+                                                    {formatActivityDuration(
                                                         activity.durationMinutes
                                                     )}
                                                 </Text>

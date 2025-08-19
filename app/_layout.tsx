@@ -69,6 +69,13 @@ export default function RootLayout() {
                                 headerShown: true,
                             }}
                         />
+                        <Stack.Screen
+                            name="purchase"
+                            options={{
+                                title: 'Historia kupionych karnetów',
+                                headerShown: true,
+                            }}
+                        />
                     </Stack>
                     <StatusBar style="auto" />
                 </ThemeProvider>

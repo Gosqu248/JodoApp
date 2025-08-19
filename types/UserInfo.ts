@@ -5,4 +5,5 @@ export interface UserInfo {
     phoneNumber: string;
     birthDate: string;
     createdDate: string;
+    photoUpdatedDate: string;
 }
