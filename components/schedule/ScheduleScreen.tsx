@@ -8,7 +8,7 @@ import {
     Modal,
     Alert,
     StyleSheet,
-    SafeAreaView,
+    SafeAreaView, Platform, StatusBar,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { getCurrentWeekSchedule } from '@/api/schedule';
@@ -305,6 +305,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FAFAFA',
+        paddingBottom: Platform.OS === 'android' ? 25 : 0,
     },
     loadingContainer: {
         flex: 1,

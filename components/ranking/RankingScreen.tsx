@@ -7,7 +7,8 @@ import {
     ScrollView,
     StatusBar,
     ActivityIndicator,
-    Alert
+    Alert,
+    Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -198,7 +199,8 @@ export default function RankingScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc'
+        backgroundColor: '#f8fafc',
+        paddingBottom: Platform.OS === 'android' ? 25 : 0
     },
     loadingContainer: {
         flex: 1,

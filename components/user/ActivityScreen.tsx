@@ -8,7 +8,7 @@ import {
     ActivityIndicator,
     Alert,
     RefreshControl,
-    TouchableOpacity
+    TouchableOpacity, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -343,7 +343,7 @@ export default function ActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1, backgroundColor: '#fff', paddingBottom: Platform.OS === 'android' ? 25 : 0},
     scrollContainer: { padding: 20, paddingBottom: 80 },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: {

@@ -8,7 +8,7 @@ import {
     ActivityIndicator,
     Alert,
     SafeAreaView,
-    RefreshControl
+    RefreshControl, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -169,7 +169,8 @@ export default function PurchaseScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FAFAFA'
+        backgroundColor: '#FAFAFA',
+        paddingBottom: Platform.OS === 'android' ? 25 : 0
     },
     loadingContainer: {
         flex: 1,
