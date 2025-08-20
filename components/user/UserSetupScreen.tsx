@@ -14,11 +14,16 @@ import {
 import {Image} from 'expo-image';
 import {Ionicons} from '@expo/vector-icons';
 import {useUser} from '@/context/UserContext';
+import {useAuth} from '@/context/AuthContext';
+import {useRouter} from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {useImagePicker} from "@/utils/useImagePicker";
+import {formatDate} from "@/utils/formatters";
 
 export default function UserSetupScreen() {
-    const {updateUserInfo} = useUser();
+    const {updateUserInfo, loading} = useUser();
+    const {logout} = useAuth();
+    const router = useRouter();
     const {selectedImage, showImagePicker} = useImagePicker();
 
     const [firstName, setFirstName] = useState('');
@@ -26,7 +31,6 @@ export default function UserSetupScreen() {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [birthDate, setBirthDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [loading, setLoading] = useState(false);
 
     const handleDateChange = (event: any, selectedDate?: Date) => {
         const currentDate = selectedDate || birthDate;
@@ -45,28 +49,23 @@ export default function UserSetupScreen() {
             return;
         }
 
-        setLoading(true);
-        try {
-            await updateUserInfo({
-                firstName: firstName.trim(),
-                lastName: lastName.trim(),
-                phoneNumber: phoneNumber.trim(),
-                birthDate: birthDate.toISOString(),
-                profileImageUri: selectedImage!,
-            });
-        } catch (e) {
-            Alert.alert('Błąd', 'Nie udało się zapisać danych.');
-        } finally {
-            setLoading(false);
-        }
+        await updateUserInfo({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            phoneNumber: phoneNumber.trim(),
+            birthDate: birthDate.toISOString(),
+            profileImageUri: selectedImage!,
+        });
     };
 
-    const formatDate = (date: Date) =>
-        date.toLocaleDateString('pl-PL', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
+    const handleLogout = async () => {
+        try {
+            await logout();
+            router.push('/(tabs)');
+        } catch (e) {
+            Alert.alert('Błąd', 'Nie udało się wylogować.');
+        }
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -200,6 +199,15 @@ export default function UserSetupScreen() {
                         </>
                     )}
                 </TouchableOpacity>
+
+                {/* Przycisk powrotu */}
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={handleLogout}
+                >
+                    <Ionicons name="arrow-back" size={20} color="#000" />
+                    <Text style={styles.submitButtonText}>Powrót do logowania</Text>
+                </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
     );
@@ -209,6 +217,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     scrollContainer: {
         padding: 20,
@@ -365,7 +374,6 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 16,
         marginTop: 10,
-        marginBottom: 40
     },
     submitButtonDisabled: {
         backgroundColor: '#ccc'
@@ -375,5 +383,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 8
-    }
+    },
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#cccac9',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 30,
+        marginBottom: 40
+    },
 });

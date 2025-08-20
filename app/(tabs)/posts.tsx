@@ -5,7 +5,9 @@ import {
     ActivityIndicator,
     RefreshControl,
     FlatList,
-    ListRenderItemInfo, SafeAreaView, StatusBar,
+    ListRenderItemInfo,
+    StatusBar,
+    Platform,
 } from 'react-native';
 import PostItem from '@/components/post/PostItem';
 import { ThemedText } from '@/components/ThemedText';
@@ -13,6 +15,8 @@ import { publicApi } from '@/api/client';
 import { Post } from '@/types/Post';
 import {PageResponse} from "@/types/PageResponse";
 import { apiUrl } from '@/api/apiUrl';
+import {handleApiError} from "@/utils/errorHandler";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function PostsScreen() {
@@ -39,7 +43,7 @@ export default function PostsScreen() {
             setPage(data.pageNumber);
             setTotalPages(data.totalPages);
         } catch (error) {
-            console.error('Błąd pobierania postów:', error);
+            handleApiError(error);
         } finally {
             setLoading(false);
             setLoadingMore(false);
@@ -92,39 +96,47 @@ export default function PostsScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
-            <View style={styles.header}>
-                <ThemedText style={styles.headerTitle}>🏋️ Aktualności</ThemedText>
-                <ThemedText style={styles.headerSubtitle}>
-                    Bądź na bieżąco z tym co dzieje się w siłowni
-                </ThemedText>
-            </View>
+        <View style={styles.container}>
+            <SafeAreaView style={styles.topSafeArea} edges={['top']}>
+                <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
+                <View style={styles.header}>
+                    <ThemedText style={styles.headerTitle}>🏋️ Aktualności</ThemedText>
+                    <ThemedText style={styles.headerSubtitle}>
+                        Bądź na bieżąco z tym co dzieje się w siłowni
+                    </ThemedText>
+                </View>
+            </SafeAreaView>
 
-            <FlatList
-                data={posts}
-                renderItem={renderItem}
-                keyExtractor={item => item.id.toString()}
-                onEndReached={loadMore}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={renderFooter}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                }
-                contentContainerStyle={styles.postsContainer}
-            />
-        </SafeAreaView>
+            <View style={styles.listContainer}>
+                <FlatList
+                    data={posts}
+                    renderItem={renderItem}
+                    keyExtractor={item => item.id.toString()}
+                    onEndReached={loadMore}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={renderFooter}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                    }
+                    contentContainerStyle={styles.postsContainer}
+                />
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
     header: {
-        paddingBottom: 10,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+
     },
     headerTitle: {
-        paddingTop: 10,
         fontSize: 28,
+        paddingTop: 5,
         fontWeight: 'bold',
         color: '#ffb300',
         textAlign: 'center',
@@ -134,8 +146,18 @@ const styles = StyleSheet.create({
         color: 'rgba(57,56,56,0.9)',
         textAlign: 'center',
         lineHeight: 22,
+        paddingTop: 5,
+    },
+    listContainer: {
+        flex: 1,
+        width: '100%',
     },
     postsContainer: { paddingTop: 5, paddingBottom: 40 },
-    loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    loader: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
+    },
     footer: { paddingVertical: 20 },
 });

@@ -7,6 +7,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import Icon from 'react-native-vector-icons/Ionicons';
+
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -20,7 +22,6 @@ export default function TabLayout() {
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
           },
           default: {},
@@ -44,7 +45,7 @@ export default function TabLayout() {
             name="sativa"
             options={{
                 title: 'Sativa Life',
-                tabBarIcon: ({ color }) => <IconSymbol size={28} name="heart.circle" color={color} />,
+                tabBarIcon: ({ color }) => <Icon size={28} name="heart-circle" color={color} />,
             }}
         />
     </Tabs>
