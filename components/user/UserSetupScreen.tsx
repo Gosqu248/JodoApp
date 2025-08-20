@@ -9,24 +9,23 @@ import {
     StatusBar,
     TextInput,
     Alert,
-    Platform,
-    ActionSheetIOS
+    Platform
 } from 'react-native';
 import {Image} from 'expo-image';
 import {Ionicons} from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import {useUser} from '@/context/UserContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import {useImagePicker} from "@/utils/useImagePicker";
 
 export default function UserSetupScreen() {
     const {updateUserInfo} = useUser();
+    const {selectedImage, showImagePicker} = useImagePicker();
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [birthDate, setBirthDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [profileImage, setProfileImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
     const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -35,116 +34,13 @@ export default function UserSetupScreen() {
         setBirthDate(currentDate);
     };
 
-    const requestPermissions = async () => {
-        const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-        const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-        return {
-            camera: cameraPermission.status === 'granted',
-            mediaLibrary: mediaLibraryPermission.status === 'granted'
-        };
-    };
-
-    const showPermissionAlert = () => {
-        Alert.alert(
-            'Brak uprawnień',
-            'Aby dodać zdjęcie profilowe, musisz nadać uprawnienia do aparatu lub galerii.',
-            [{ text: 'OK' }]
-        );
-    };
-
-    const pickImageFromCamera = async () => {
-        try {
-            const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-                setProfileImage(result.assets[0].uri);
-            }
-        } catch (error) {
-            Alert.alert('Błąd', 'Nie udało się zrobić zdjęcia');
-        }
-    };
-
-    const pickImageFromGallery = async () => {
-        try {
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-                setProfileImage(result.assets[0].uri);
-            }
-        } catch (error) {
-            Alert.alert('Błąd', 'Nie udało się wybrać zdjęcia');
-        }
-    };
-
-    const showImagePicker = async () => {
-        const permissions = await requestPermissions();
-
-        if (Platform.OS === 'ios') {
-            ActionSheetIOS.showActionSheetWithOptions(
-                {
-                    options: ['Anuluj', 'Aparat', 'Galeria'],
-                    cancelButtonIndex: 0,
-                    title: 'Wybierz źródło zdjęcia'
-                },
-                (buttonIndex) => {
-                    if (buttonIndex === 1 && permissions.camera) {
-                        pickImageFromCamera();
-                    } else if (buttonIndex === 2 && permissions.mediaLibrary) {
-                        pickImageFromGallery();
-                    } else if (buttonIndex !== 0) {
-                        showPermissionAlert();
-                    }
-                }
-            );
-        } else {
-            Alert.alert(
-                'Wybierz źródło zdjęcia',
-                'Skąd chcesz wybrać zdjęcie?',
-                [
-                    { text: 'Anuluj', style: 'cancel' },
-                    {
-                        text: 'Aparat',
-                        onPress: () => {
-                            if (permissions.camera) {
-                                pickImageFromCamera();
-                            } else {
-                                showPermissionAlert();
-                            }
-                        }
-                    },
-                    {
-                        text: 'Galeria',
-                        onPress: () => {
-                            if (permissions.mediaLibrary) {
-                                pickImageFromGallery();
-                            } else {
-                                showPermissionAlert();
-                            }
-                        }
-                    }
-                ]
-            );
-        }
-    };
-
     const handleSubmit = async () => {
         if (!firstName.trim() || !lastName.trim()) {
             Alert.alert('Błąd', 'Proszę wypełnić wszystkie wymagane pola');
             return;
         }
 
-        if (!profileImage) {
+        if (!selectedImage) {
             Alert.alert('Błąd', 'Proszę dodać zdjęcie profilowe');
             return;
         }
@@ -156,7 +52,7 @@ export default function UserSetupScreen() {
                 lastName: lastName.trim(),
                 phoneNumber: phoneNumber.trim(),
                 birthDate: birthDate.toISOString(),
-                profileImageUri: profileImage!,
+                profileImageUri: selectedImage!,
             });
         } catch (e) {
             Alert.alert('Błąd', 'Nie udało się zapisać danych.');
@@ -255,9 +151,9 @@ export default function UserSetupScreen() {
                     <Text style={styles.sectionTitle}>Zdjęcie profilowe</Text>
                     <View style={styles.photoCard}>
                         <View style={styles.photoContainer}>
-                            {profileImage ? (
+                            {selectedImage ? (
                                 <Image
-                                    source={{uri: profileImage}}
+                                    source={{uri: selectedImage}}
                                     style={styles.profileImage}
                                     contentFit="cover"
                                 />
@@ -275,7 +171,7 @@ export default function UserSetupScreen() {
                         >
                             <Ionicons name="camera" size={20} color="#ffc500"/>
                             <Text style={styles.photoButtonText}>
-                                {profileImage ? 'Zmień zdjęcie' : 'Wybierz zdjęcie'}
+                                {selectedImage ? 'Zmień zdjęcie' : 'Wybierz zdjęcie'}
                             </Text>
                         </TouchableOpacity>
 

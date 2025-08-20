@@ -14,6 +14,7 @@ import { UserInfo } from '@/types/UserInfo';
 import { useAuth } from './AuthContext';
 import {Membership} from "@/types/Membership";
 import {getMembership} from "@/api/membership";
+import {handleApiError} from "@/utils/errorHandler";
 
 interface UserContextValue {
     userInfo: UserInfo | null;
@@ -65,8 +66,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
                 const membershipData = await getMembership(user.id);
                 setMembership(membershipData);
             } catch (error) {
-                console.error('Błąd przy pobieraniu danych membership:', error);
-                setMembership(null);
+                handleApiError(error);
             } finally {
                 setMembershipLoading(false);
             }
@@ -79,6 +79,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
             const updated = await apiUpdateUserInfo(params);
             setUserInfo(updated);
             await completeFirstLogin();
+        } catch (error: any) {
+            handleApiError(error);
         } finally {
             setLoading(false);
         }

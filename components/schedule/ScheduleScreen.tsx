@@ -167,7 +167,7 @@ export default function ScheduleScreen() {
 
     const isClassBooked = (classId: string): boolean => {
         return userBookings.some(
-            booking => booking.schedule.id === classId
+            booking => booking.schedule.id === classId && booking.yearWeek === weeklySchedule?.yearWeek
         );
     };
 

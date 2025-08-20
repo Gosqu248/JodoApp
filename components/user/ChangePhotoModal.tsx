@@ -7,14 +7,12 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
-    ActionSheetIOS,
-    Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { updateUserPhoto } from '@/api/user';
-import { ErrorResponse } from '@/types/ErrorResponse';
+import {handleApiError} from "@/utils/errorHandler";
+import {useImagePicker} from "@/utils/useImagePicker";
 
 interface ChangePhotoModalProps {
     visible: boolean;
@@ -23,126 +21,15 @@ interface ChangePhotoModalProps {
 }
 
 export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: ChangePhotoModalProps) {
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
-
-    const requestPermissions = async () => {
-        const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-        const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-        return {
-            camera: cameraPermission.status === 'granted',
-            mediaLibrary: mediaLibraryPermission.status === 'granted'
-        };
-    };
-
-    const showImagePicker = async () => {
-        const permissions = await requestPermissions();
-
-        if (Platform.OS === 'ios') {
-            ActionSheetIOS.showActionSheetWithOptions(
-                {
-                    options: ['Anuluj', 'Aparat', 'Galeria'],
-                    cancelButtonIndex: 0,
-                    title: 'Wybierz źródło zdjęcia'
-                },
-                (buttonIndex) => {
-                    if (buttonIndex === 1 && permissions.camera) {
-                        pickImageFromCamera();
-                    } else if (buttonIndex === 2 && permissions.mediaLibrary) {
-                        pickImageFromGallery();
-                    } else if (buttonIndex !== 0) {
-                        showPermissionAlert();
-                    }
-                }
-            );
-        } else {
-            Alert.alert(
-                'Wybierz źródło zdjęcia',
-                'Skąd chcesz wybrać zdjęcie?',
-                [
-                    { text: 'Anuluj', style: 'cancel' },
-                    {
-                        text: 'Aparat',
-                        onPress: () => {
-                            if (permissions.camera) {
-                                pickImageFromCamera();
-                            } else {
-                                showPermissionAlert();
-                            }
-                        }
-                    },
-                    {
-                        text: 'Galeria',
-                        onPress: () => {
-                            if (permissions.mediaLibrary) {
-                                pickImageFromGallery();
-                            } else {
-                                showPermissionAlert();
-                            }
-                        }
-                    }
-                ]
-            );
-        }
-    };
-
-    const showPermissionAlert = () => {
-        Alert.alert(
-            'Brak uprawnień',
-            'Aby zmienić zdjęcie profilowe, musisz nadać uprawnienia do aparatu lub galerii.',
-            [{ text: 'OK' }]
-        );
-    };
-
-    const pickImageFromCamera = async () => {
-        try {
-            const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ['images'],
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-                await processImage(result.assets[0].uri);
-            }
-        } catch (error) {
-            Alert.alert('Błąd', 'Nie udało się zrobić zdjęcia');
-        }
-    };
-
-    const pickImageFromGallery = async () => {
-        try {
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ['images'],
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.8,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-                await processImage(result.assets[0].uri);
-            }
-        } catch (error) {
-            Alert.alert('Błąd', 'Nie udało się wybrać zdjęcia');
-        }
-    };
-
-    const processImage = async (uri: string) => {
-        try {
-            setSelectedImage(uri);
-        } catch (error) {
-            Alert.alert('Błąd', 'Nie udało się przetworzyć zdjęcia');
-        }
-    };
+    const { selectedImage, showImagePicker, resetImage } = useImagePicker();
 
     const uploadPhoto = async () => {
         if (!selectedImage) return;
 
         setUploading(true);
         try {
-            const result = await updateUserPhoto(selectedImage);
+            await updateUserPhoto(selectedImage);
             Alert.alert(
                 'Sukces',
                 'Zdjęcie profilowe zostało pomyślnie zaktualizowane',
@@ -157,11 +44,7 @@ export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: C
                 ]
             );
         } catch (error: any) {
-            const errData = error?.response?.data as ErrorResponse;
-            const message =
-                errData?.message || error.message || 'Wystąpił nieoczekiwany błąd.';
-
-            Alert.alert('Błąd', message, [{ text: 'OK' }]);
+            handleApiError(error);
         } finally {
             setUploading(false);
         }
@@ -169,7 +52,7 @@ export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: C
 
 
     const handleClose = () => {
-        setSelectedImage(null);
+        resetImage();
         onClose();
     };
 

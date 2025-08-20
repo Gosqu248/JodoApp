@@ -9,7 +9,7 @@ interface AuthContextValue {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string) => Promise<boolean>;
+    register: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     completeFirstLogin: () => Promise<void>;
 }
@@ -18,7 +18,7 @@ export const AuthContext = createContext<AuthContextValue>({
     user: null,
     loading: false,
     login: async () => {},
-    register: async () => false,
+    register: async () => {},
     logout: async () => {},
     completeFirstLogin: async () => {}
 });

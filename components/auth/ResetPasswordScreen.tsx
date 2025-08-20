@@ -4,6 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import {ResetCodeParams, resetPassword, ResetPasswordParams, sendResetPasswordEmail, verifyResetCode} from "@/api/auth";
+import {ErrorResponse} from "@/types/ErrorResponse";
+import {handleApiError} from "@/utils/errorHandler";
 
 interface ResetPasswordScreenProps {
     onBackToLogin: () => void;
@@ -17,6 +19,11 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
     const [isValidCode, setIsValidCode] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [errors, setErrors] = useState<{
+        code?: string;
+        newPassword?: string;
+        confirmNewPassword?: string;
+    }>({});
 
     const validateEmail = (email: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -36,16 +43,10 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
 
         setIsLoading(true);
         try {
-            const response = await sendResetPasswordEmail(email);
-            if (response.success) {
-                setResetSent(true);
-            } else {
-                console.log(response);
-                Alert.alert('Błąd', 'Wystąpił problem podczas resetowania hasła. Spróbuj ponownie później.');
-            }
-        } catch (error) {
-            console.error(error);
-            Alert.alert('Błąd', 'Wystąpił problem podczas resetowania hasła. Spróbuj ponownie później.');
+            await sendResetPasswordEmail(email);
+            setResetSent(true);
+        } catch (error: any) {
+            handleApiError(error);
         } finally {
             setIsLoading(false);
         }
@@ -58,11 +59,9 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
             const response = await verifyResetCode(params);
             if (response.success) {
                 setIsValidCode(true);
-            } else {
-                Alert.alert('Błąd', 'Nieprawidłowy kod weryfikacyjny. Spróbuj ponownie.');
             }
-        } catch (error) {
-            Alert.alert('Błąd', 'Wystąpił problem podczas weryfikacji kodu. Spróbuj ponownie później.');
+        } catch (error: any) {
+            handleApiError(error);
         } finally {
             setIsLoading(false);
         }
@@ -78,28 +77,54 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
             if (response.success) {
                 Alert.alert('Sukces', 'Hasło zostało pomyślnie zresetowane.');
                 onBackToLogin();
-            } else {
-                console.log(response);
-                Alert.alert('Błąd', 'Wystąpił problem podczas resetowania hasła. Spróbuj ponownie później.');
-            }
-        } catch (error) {
-            console.error(error);
-            Alert.alert('Błąd', 'Wystąpił problem podczas resetowania hasła. Spróbuj ponownie później.');
+           }
+        } catch (error: any) {
+            handleApiError(error);
         } finally {
             setIsLoading(false);
         }
     };
 
     const validateForm = () => {
-        if (newPassword.length < 6) {
-            Alert.alert('Błąd', 'Hasło musi mieć co najmniej 6 znaków');
-            return false;
+        const newErrors: {
+            newPassword?: string;
+            confirmNewPassword?: string;
+        } = {};
+
+        if (!newPassword.trim()) {
+            newErrors.newPassword = 'Nowe hasło jest wymagane';
+        } else if (newPassword.length < 6) {
+            newErrors.newPassword = 'Hasło musi mieć co najmniej 6 znaków';
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+            newErrors.newPassword = 'Hasło musi zawierać małą literę, dużą literę i cyfrę';
         }
-        if (newPassword !== confirmNewPassword) {
-            Alert.alert('Błąd', 'Hasła nie są identyczne');
-            return false;
+
+        if (!confirmNewPassword.trim()) {
+            newErrors.confirmNewPassword = 'Potwierdzenie hasła jest wymagane';
+        } else if (newPassword !== confirmNewPassword) {
+            newErrors.confirmNewPassword = 'Hasła nie są identyczne';
         }
-        return true;
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const updateField = (field: 'code' | 'newPassword' | 'confirmNewPassword', value: string) => {
+        switch (field) {
+            case 'code':
+                setCode(value);
+                break;
+            case 'newPassword':
+                setNewPassword(value);
+                break;
+            case 'confirmNewPassword':
+                setConfirmNewPassword(value);
+                break;
+        }
+
+        if (errors[field]) {
+            setErrors(prev => ({ ...prev, [field]: undefined }));
+        }
     };
 
     return (
@@ -203,29 +228,41 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                                 <View style={styles.formContainer}>
                                     <View style={styles.inputContainer}>
                                         <TextInput
-                                            style={styles.input}
+                                            style={[styles.input, errors.newPassword && styles.inputError]}
                                             placeholder="Nowe hasło"
                                             placeholderTextColor="#666"
                                             value={newPassword}
-                                            onChangeText={setNewPassword}
+                                            onChangeText={(text) => updateField('newPassword', text)}
                                             keyboardType="default"
                                             secureTextEntry
                                             autoCapitalize="none"
                                             editable={!isLoading}
                                         />
+                                        {errors.newPassword && <Text style={styles.errorText}>{errors.newPassword}</Text>}
                                     </View>
+
                                     <View style={styles.inputContainer}>
                                         <TextInput
-                                            style={styles.input}
+                                            style={[styles.input, errors.confirmNewPassword && styles.inputError]}
                                             placeholder="Powtórz hasło"
                                             placeholderTextColor="#666"
                                             value={confirmNewPassword}
-                                            onChangeText={setConfirmNewPassword}
+                                            onChangeText={(text) => updateField('confirmNewPassword', text)}
                                             keyboardType="default"
                                             secureTextEntry
                                             autoCapitalize="none"
                                             editable={!isLoading}
                                         />
+                                        {errors.confirmNewPassword && <Text style={styles.errorText}>{errors.confirmNewPassword}</Text>}
+                                    </View>
+
+                                    {/* Sekcja wymagań hasła */}
+                                    <View style={styles.passwordRequirements}>
+                                        <Text style={styles.requirementsTitle}>Wymagania hasła:</Text>
+                                        <Text style={styles.requirementText}>• Co najmniej 6 znaków</Text>
+                                        <Text style={styles.requirementText}>• Zawiera małą literę</Text>
+                                        <Text style={styles.requirementText}>• Zawiera dużą literę</Text>
+                                        <Text style={styles.requirementText}>• Zawiera cyfrę</Text>
                                     </View>
 
 
@@ -326,6 +363,33 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 4,
+    },
+    inputError: {
+        borderColor: '#F44336',
+        borderWidth: 1,
+    },
+    errorText: {
+        color: '#F44336',
+        fontSize: 14,
+        marginTop: 4,
+        marginLeft: 4,
+    },
+    passwordRequirements: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+    },
+    requirementsTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#ffffff',
+        marginBottom: 4,
+    },
+    requirementText: {
+        fontSize: 12,
+        color: '#f0f0f0',
+        marginBottom: 2,
     },
     resetButton: {
         backgroundColor: '#000000',

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { MembershipType } from "@/types/MembershipType";
 import { getActiveMembershipTypes } from "@/api/membership";
 import TypeItem from './TypeItem';
+import {handleApiError} from "@/utils/errorHandler";
 
 interface GroupedMembershipTypes {
     oneTime: MembershipType[];
@@ -33,8 +34,7 @@ export default function TypesScreen() {
             const types = await getActiveMembershipTypes();
             setMembershipTypes(types);
         } catch (error) {
-            console.error('Error fetching membership types:', error);
-            Alert.alert('Błąd', 'Wystąpił błąd podczas pobierania danych karnetów');
+            handleApiError(error);
         } finally {
             setLoading(false);
         }
