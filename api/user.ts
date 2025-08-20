@@ -50,7 +50,6 @@ export const updateUserInfo = async (params: UpdateUserInfoParams): Promise<User
 };
 
 export const getUserPhoto = async (userId: string): Promise<string | null> => {
-    try {
         const response = await privateApi.get(`/users/info/${userId}/photo`, {
             responseType: 'arraybuffer',
         });
@@ -59,10 +58,6 @@ export const getUserPhoto = async (userId: string): Promise<string | null> => {
         const mimeType = response.headers['content-type'] || 'image/jpeg';
 
         return `data:${mimeType};base64,${base64}`;
-    } catch (error) {
-        console.error('Error loading photo:', error);
-        return null;
-    }
 };
 
 export const updateUserPhoto = async (photoUri: string): Promise<UserInfo> => {
@@ -77,7 +72,6 @@ export const updateUserPhoto = async (photoUri: string): Promise<UserInfo> => {
         type: mimeType,
     } as any);
 
-    try {
         const { data } = await privateApi.patch<UserInfo>(
             '/users/info/photo',
             formData,
@@ -90,11 +84,4 @@ export const updateUserPhoto = async (photoUri: string): Promise<UserInfo> => {
             }
         );
         return data;
-    } catch (error: any) {
-        const message =
-            error?.response?.data?.message ||
-            error?.message ||
-            'Wystąpił nieoczekiwany błąd.';
-        return { message };
-    }
 };

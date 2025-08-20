@@ -17,6 +17,7 @@ import {LinearGradient} from "expo-linear-gradient";
 import RegisterScreen from './RegisterScreen';
 import PrivacyPolicy from './PrivacyPolicy';
 import ResetPasswordScreen from './ResetPasswordScreen';
+import {ErrorResponse} from "@/types/ErrorResponse";
 
 export default function LoginScreen() {
     const { login } = useContext(AuthContext);
@@ -34,8 +35,12 @@ export default function LoginScreen() {
         setIsLoading(true);
         try {
             await login(username, password);
-        } catch (error) {
-            Alert.alert('Błąd logowania', 'Nieprawidłowe dane logowania');
+        } catch (error: any) {
+            const errData = error?.response?.data as ErrorResponse;
+            const message =
+                errData?.message || error.message || 'Wystąpił nieoczekiwany błąd.';
+
+            Alert.alert('Błąd', message, [{ text: 'OK' }]);
         } finally {
             setIsLoading(false);
         }

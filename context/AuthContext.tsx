@@ -40,24 +40,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const login = async (email: string, password: string) => {
         setLoading(true);
-        try {
             const authResponse: AuthResponse = await doLogin({ email, password });
             setUser(authResponse.user);
-        } catch (error) {
-            await doLogout();
-            console.error('Login failed:', error);
-        } finally {
-            setLoading(false);
-        }
     };
 
     const register = async (email: string, password: string) => {
-        try {
-            await doRegister({ email, password });
-            return true;
-        } catch {
-            return false;
-        }
+        await doRegister({ email, password });
     };
 
     const logout = async () => {

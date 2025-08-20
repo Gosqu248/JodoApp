@@ -17,6 +17,7 @@ import {Image} from "expo-image";
 import PrivacyPolicy from './PrivacyPolicy';
 import Terms from './Terms';
 import {AuthContext} from "@/context/AuthContext";
+import {ErrorResponse} from "@/types/ErrorResponse";
 
 interface RegisterScreenProps {
     onBackToLogin: () => void;
@@ -31,29 +32,69 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
     const [acceptTerms, setAcceptTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [currentView, setCurrentView] = useState<'register' | 'privacy' | 'terms'>('register');
+    const [errors, setErrors] = useState<{
+        email?: string;
+        password?: string;
+        confirmPassword?: string;
+    }>({});
 
     const validateForm = () => {
+        const newErrors: {
+            email?: string;
+            password?: string;
+            confirmPassword?: string;
+        } = {};
+
         if (!email.trim()) {
-            Alert.alert('Błąd', 'Proszę podać email');
+            newErrors.email = 'Proszę podać email';
+        } else if (!email.includes('@')) {
+            newErrors.email = 'Proszę podać prawidłowy adres email';
+        }
+
+        if (!password.trim()) {
+            newErrors.password = 'Proszę podać hasło';
+        } else if (password.length < 6) {
+            newErrors.password = 'Hasło musi mieć co najmniej 6 znaków';
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+            newErrors.password = 'Hasło musi zawierać małą literę, dużą literę i cyfrę';
+        }
+
+        if (!confirmPassword.trim()) {
+            newErrors.confirmPassword = 'Proszę potwierdzić hasło';
+        } else if (password !== confirmPassword) {
+            newErrors.confirmPassword = 'Hasła nie są identyczne';
+        }
+
+        setErrors(newErrors);
+
+        if (Object.keys(newErrors).length > 0) {
             return false;
         }
-        if (!email.includes('@')) {
-            Alert.alert('Błąd', 'Proszę podać prawidłowy adres email');
-            return false;
-        }
-        if (password.length < 6) {
-            Alert.alert('Błąd', 'Hasło musi mieć co najmniej 6 znaków');
-            return false;
-        }
-        if (password !== confirmPassword) {
-            Alert.alert('Błąd', 'Hasła nie są identyczne');
-            return false;
-        }
+
         if (!acceptTerms) {
             Alert.alert('Błąd', 'Musisz zaakceptować regulamin i politykę prywatności');
             return false;
         }
+
         return true;
+    };
+
+    const updateField = (field: 'email' | 'password' | 'confirmPassword', value: string) => {
+        switch (field) {
+            case 'email':
+                setEmail(value);
+                break;
+            case 'password':
+                setPassword(value);
+                break;
+            case 'confirmPassword':
+                setConfirmPassword(value);
+                break;
+        }
+
+        if (errors[field]) {
+            setErrors(prev => ({ ...prev, [field]: undefined }));
+        }
     };
 
     const handleRegister = async () => {
@@ -61,22 +102,32 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
 
         setIsLoading(true);
         try {
-            const success = await register(email, password);
-            if (success) {
+            await register(email, password);
                 Alert.alert(
                     'Sukces!',
                     'Konto zostało utworzone pomyślnie. Możesz się teraz zalogować.',
                     [{ text: 'OK', onPress: onBackToLogin }]
                 );
-            } else {
-                Alert.alert('Błąd', 'Rejestracja nie powiodła się. Spróbuj ponownie.');
-            }
-        } catch (error) {
-            Alert.alert('Błąd', 'Wystąpił błąd podczas rejestracji');
+        } catch (error: any) {
+            const errData = error?.response?.data as ErrorResponse;
+            const message =
+                errData?.message || error.message || 'Wystąpił nieoczekiwany błąd.';
+
+            Alert.alert('Błąd', message, [{ text: 'OK' }]);
         } finally {
+            resetForm();
             setIsLoading(false);
+
         }
     };
+
+    const resetForm = () => {
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setAcceptTerms(false);
+        setErrors({});
+    }
 
     if (currentView === 'privacy') {
         return <PrivacyPolicy 
@@ -117,39 +168,51 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                     <View style={styles.formContainer}>
                         <View style={styles.inputContainer}>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, errors.email && styles.inputError]}
                                 placeholder="Email"
                                 placeholderTextColor="#666"
                                 value={email}
-                                onChangeText={setEmail}
+                                onChangeText={(text) => updateField('email', text)}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                                 autoComplete="email"
                             />
+                            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
                         </View>
 
                         <View style={styles.inputContainer}>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, errors.password && styles.inputError]}
                                 placeholder="Hasło"
                                 placeholderTextColor="#666"
                                 secureTextEntry
                                 value={password}
-                                onChangeText={setPassword}
+                                onChangeText={(text) => updateField('password', text)}
                                 autoComplete="new-password"
                             />
+                            {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                         </View>
 
                         <View style={styles.inputContainer}>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, errors.confirmPassword && styles.inputError]}
                                 placeholder="Potwierdź hasło"
                                 placeholderTextColor="#666"
                                 secureTextEntry
                                 value={confirmPassword}
-                                onChangeText={setConfirmPassword}
+                                onChangeText={(text) => updateField('confirmPassword', text)}
                                 autoComplete="new-password"
                             />
+                            {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
+                        </View>
+
+                        {/* Dodaj sekcję wymagań hasła */}
+                        <View style={styles.passwordRequirements}>
+                            <Text style={styles.requirementsTitle}>Wymagania hasła:</Text>
+                            <Text style={styles.requirementText}>• Co najmniej 6 znaków</Text>
+                            <Text style={styles.requirementText}>• Zawiera małą literę</Text>
+                            <Text style={styles.requirementText}>• Zawiera dużą literę</Text>
+                            <Text style={styles.requirementText}>• Zawiera cyfrę</Text>
                         </View>
 
                         <TouchableOpacity
@@ -250,6 +313,33 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 4,
+    },
+    inputError: {
+        borderColor: '#F44336',
+        borderWidth: 1,
+    },
+    errorText: {
+        color: '#F44336',
+        fontSize: 14,
+        marginTop: 4,
+        marginLeft: 4,
+    },
+    passwordRequirements: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+    },
+    requirementsTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#ffffff',
+        marginBottom: 4,
+    },
+    requirementText: {
+        fontSize: 12,
+        color: '#f0f0f0',
+        marginBottom: 2,
     },
     checkboxContainer: {
         flexDirection: 'row',

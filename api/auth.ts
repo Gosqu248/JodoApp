@@ -1,6 +1,6 @@
 import {User} from "@/types/User";
 import {AuthResponse} from "@/types/AuthResponse";
-import {publicApi} from "@/api/client";
+import {privateApi, publicApi} from "@/api/client";
 import * as SecureStore from "expo-secure-store";
 import {ResultResponse} from "@/types/ResultResponse";
 
@@ -40,7 +40,7 @@ export const resetPassword = async (params: ResetPasswordParams): Promise<Result
 };
 
 export const changePassword = async (params: ChangePasswordRequest): Promise<ResultResponse> => {
-    const { data } = await publicApi.post<ResultResponse>("/auth/change-password", params);
+    const { data } = await privateApi.put<ResultResponse>("/auth/change-password", params);
     return data;
 }
 

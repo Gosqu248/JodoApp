@@ -15,3 +15,10 @@ export const getPurchasesByMembershipId = async (
     );
     return data;
 };
+
+export const getLastPurchase = async (membershipId: string): Promise<MembershipPurchase | null> => {
+        const { data } = await privateApi.get<MembershipPurchase>(
+            `/purchases/${membershipId}/last`
+        );
+        return data;
+}
