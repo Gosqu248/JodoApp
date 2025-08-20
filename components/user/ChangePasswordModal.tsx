@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cancelButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#666',
     },
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     submitButtonText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: '600',
         color: '#000',
     },

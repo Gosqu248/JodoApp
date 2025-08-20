@@ -1,4 +1,4 @@
-import React, {useContext, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
     StyleSheet,
     Text,
@@ -10,10 +10,10 @@ import {
     ActivityIndicator,
     Alert,
 } from 'react-native';
-import { AuthContext } from '@/context/AuthContext';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { getUserPhoto } from '@/api/user';
 import ChangePasswordModal from './ChangePasswordModal';
@@ -23,10 +23,12 @@ import { getLastPurchase } from '@/api/purchase';
 import {MembershipPurchase} from "@/types/MembershipPurchase";
 import SettingsSlidePanel from "@/components/user/SeetingsSidePanel";
 import {ErrorResponse} from "@/types/ErrorResponse";
+import { formatDate } from '@/utils/formatters';
 
 export default function UserProfileScreen() {
-    const { user, logout } = useContext(AuthContext);
+    const { user, logout } = useAuth();
     const { userInfo, membership, loading: userLoading, membershipLoading } = useUser();
+    const router = useRouter();
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(true);
     const [settingsVisible, setSettingsVisible] = useState(false);
@@ -34,7 +36,6 @@ export default function UserProfileScreen() {
     const [changePhotoVisible, setChangePhotoVisible] = useState(false);
     const [lastPurchase, setLastPurchase] = useState<MembershipPurchase | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
 
     useEffect(() => {
         if (user?.id) {
@@ -57,7 +58,7 @@ export default function UserProfileScreen() {
 
     useEffect(() => {
         const fetchLastPurchase = async () => {
-            if (membership?.id) {
+            if (membership?.id && membership.isActive) {
                 try {
                     const purchase = await getLastPurchase(membership.id);
                     setLastPurchase(purchase);
@@ -79,65 +80,36 @@ export default function UserProfileScreen() {
         }
     }, [error]);
 
+    const handleSettingsPress = useCallback(() => setSettingsVisible(true), []);
+    const handleCloseSettings = useCallback(() => setSettingsVisible(false), []);
+    const handleChangePassword = useCallback(() => {
+        setSettingsVisible(false);
+        setChangePasswordVisible(true);
+    }, []);
+    const handleChangePhoto = useCallback(() => {
+        setSettingsVisible(false);
+        setChangePhotoVisible(true);
+    }, []);
+    const handlePhotoUpdated = useCallback((newPhotoUri: string) => {
+        setPhotoUri(newPhotoUri);
+        setChangePhotoVisible(false);
+    }, []);
+
+    const handlePushToSchedule = useCallback(() => router.push('/schedule'), [router]);
+    const handlePushToActivity = useCallback(() => router.push('/activity'), [router]);
+    const handlePushToPurchase = useCallback(() => router.push('/purchase'), [router]);
+    const handlePushToRanking = useCallback(() => router.push('/ranking'), [router]);
+    const handlePushToMembershipTypes = useCallback(() => router.push('/membershipTypes'), [router]);
+
     if (userLoading || photoLoading || membershipLoading) return <ActivityIndicator />;
     if (!userInfo || !user) return null;
 
     const membershipExpiryDate = membership?.expiryDate ? new Date(membership.expiryDate) : null;
     const currentDate = new Date();
-    const isActive = membership ? membership.isActive : false;
-    const isFrozen = membership ? membership.isFrozen : false;
+    const isActive = !!membership?.isActive;
+    const isFrozen = !!membership?.isFrozen;
     const daysLeft = membershipExpiryDate ?
         Math.ceil((membershipExpiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-
-    const formatDate = (date: Date) =>
-        date.toLocaleDateString('pl-PL', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-
-    const handleSettingsPress = () => {
-        setSettingsVisible(true);
-    };
-
-    const handleCloseSettings = () => {
-        setSettingsVisible(false);
-    };
-
-    const handleChangePassword = () => {
-        setSettingsVisible(false);
-        setChangePasswordVisible(true);
-    };
-
-    const handleChangePhoto = () => {
-        setSettingsVisible(false);
-        setChangePhotoVisible(true);
-    };
-
-    const handlePhotoUpdated = (newPhotoUri: string) => {
-        setPhotoUri(newPhotoUri);
-        setChangePhotoVisible(false);
-    };
-
-    const handlePushToSchedule = () => {
-        router.push('/schedule');
-    };
-
-    const handlePushToActivity = () => {
-        router.push('/activity');
-    };
-
-    const handlePushToPurchase = () => {
-        router.push('/purchase');
-    };
-
-    const handlePushToRanking = () => {
-        router.push('/ranking');
-    };
-
-    const handlePushToMembershipTypes = () => {
-        router.push('/membershipTypes');
-    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -202,7 +174,7 @@ export default function UserProfileScreen() {
                             </View>
 
                             <View style={styles.membershipInfo}>
-                                { membership.isActive && (
+                                {isActive && (
                                     <View style={styles.membershipNameContainer}>
                                         <Text style={styles.membershipName}>{lastPurchase?.typeName}</Text>
                                     </View>
@@ -334,7 +306,6 @@ export default function UserProfileScreen() {
                     <Text style={styles.logoutText}>Wyloguj się</Text>
                 </TouchableOpacity>
             </ScrollView>
-
             {/* Settings Slide Panel */}
             <SettingsSlidePanel
                 visible={settingsVisible}

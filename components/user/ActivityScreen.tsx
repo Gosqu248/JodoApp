@@ -55,7 +55,7 @@ export default function ActivityScreen() {
                 fetchOnGymCount();
                 fetchStats();
             }
-        }, [user?.id])
+        }, [selectedStats, user?.id])
     );
 
     useEffect(() => {

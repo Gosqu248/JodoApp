@@ -1,13 +1,19 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
     View,
     Text,
     TouchableOpacity,
     StyleSheet,
-    Animated,
     Dimensions,
 } from 'react-native';
-import {GestureHandlerRootView, GestureDetector, Gesture} from 'react-native-gesture-handler';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withTiming,
+    withSpring,
+    runOnJS,
+} from 'react-native-reanimated';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -26,70 +32,62 @@ export default function SettingsSlidePanel({
                                                onChangePassword,
                                                onChangePhoto
                                            }: SettingsSlidePanelProps) {
-    const translateX = useRef(new Animated.Value(PANEL_WIDTH)).current;
-    const backdropOpacity = useRef(new Animated.Value(0)).current;
+    const translateX = useSharedValue(PANEL_WIDTH);
+    const backdropOpacity = useSharedValue(0);
 
     useEffect(() => {
         if (visible) {
-            Animated.parallel([
-                Animated.timing(translateX, {
-                    toValue: 0,
-                    duration: 350,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(backdropOpacity, {
-                    toValue: 1,
-                    duration: 350,
-                    useNativeDriver: true,
-                }),
-            ]).start();
+            translateX.value = withTiming(0, { duration: 350 });
+            backdropOpacity.value = withTiming(1, { duration: 350 });
         } else {
-            Animated.parallel([
-                Animated.timing(translateX, {
-                    toValue: PANEL_WIDTH,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(backdropOpacity, {
-                    toValue: 0,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-            ]).start();
+            translateX.value = withTiming(PANEL_WIDTH, { duration: 300 });
+            backdropOpacity.value = withTiming(0, { duration: 300 });
         }
-    }, [visible, translateX, backdropOpacity]);
+    }, [visible]);
 
     const panGesture = Gesture.Pan()
         .onUpdate((event) => {
-            if (event.translationX < 0) {
-                translateX.setValue(0);
-            } else {
-                translateX.setValue(event.translationX);
+            if (event.translationX > 0) {
+                translateX.value = event.translationX;
             }
         })
         .onEnd((event) => {
             const shouldClose = event.translationX > PANEL_WIDTH * 0.3 || event.velocityX > 500;
             if (shouldClose) {
-                onClose();
+                translateX.value = withTiming(PANEL_WIDTH, { duration: 300 });
+                backdropOpacity.value = withTiming(0, { duration: 300 });
+                runOnJS(onClose)();
             } else {
-                Animated.spring(translateX, {
-                    toValue: 0,
-                    useNativeDriver: true,
-                    tension: 100,
-                    friction: 8,
-                }).start();
+                translateX.value = withSpring(0, {
+                    damping: 15,
+                    stiffness: 150,
+                });
             }
         });
 
+    const panelAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ translateX: translateX.value }],
+        };
+    });
+
+    const backdropAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            opacity: backdropOpacity.value,
+        };
+    });
+
+    if (!visible) {
+        return null;
+    }
+
     return (
-        <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+        <View style={StyleSheet.absoluteFill}>
             {/* Backdrop z możliwością zamknięcia */}
             <Animated.View
                 style={[
                     styles.backdrop,
-                    {
-                        opacity: backdropOpacity,
-                    }
+                    backdropAnimatedStyle
                 ]}
             >
                 <TouchableOpacity
@@ -104,9 +102,7 @@ export default function SettingsSlidePanel({
                 <Animated.View
                     style={[
                         styles.panel,
-                        {
-                            transform: [{ translateX }],
-                        }
+                        panelAnimatedStyle
                     ]}
                 >
                     {/* Wskaźnik przeciągania */}
@@ -171,7 +167,7 @@ export default function SettingsSlidePanel({
                     </View>
                 </Animated.View>
             </GestureDetector>
-        </GestureHandlerRootView>
+        </View>
     );
 }
 
