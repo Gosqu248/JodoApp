@@ -12,18 +12,27 @@ import {
 } from '@/api/user';
 import { UserInfo } from '@/types/UserInfo';
 import { useAuth } from './AuthContext';
+import {Membership} from "@/types/Membership";
+import {getMembership} from "@/api/membership";
+import {handleApiError} from "@/utils/errorHandler";
 
 interface UserContextValue {
     userInfo: UserInfo | null;
+    membership: Membership | null;
     loading: boolean;
+    membershipLoading: boolean;
     refreshUserInfo: () => Promise<void>;
+    refreshMembership: () => Promise<void>;
     updateUserInfo: (params: UpdateUserInfoParams) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextValue>({
     userInfo: null,
+    membership: null,
     loading: true,
+    membershipLoading: true,
     refreshUserInfo: async () => {},
+    refreshMembership: async () => {},
     updateUserInfo: async () => {}
 });
 
@@ -33,7 +42,9 @@ interface UserProviderProps {
 
 export const UserProvider = ({ children }: UserProviderProps) => {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+    const [membership, setMembership] = useState<Membership | null>(null);
     const [loading, setLoading] = useState(true);
+    const [membershipLoading, setMembershipLoading] = useState(true);
     const { user, completeFirstLogin } = useAuth();
 
     const refreshUserInfo = async () => {
@@ -48,12 +59,28 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         }
     };
 
+    const refreshMembership = async () => {
+        setMembershipLoading(true);
+        if (user?.id) {
+            try {
+                const membershipData = await getMembership(user.id);
+                setMembership(membershipData);
+            } catch (error) {
+                handleApiError(error);
+            } finally {
+                setMembershipLoading(false);
+            }
+        }
+    };
+
     const updateUserInfo = async (params: UpdateUserInfoParams) => {
         setLoading(true);
         try {
             const updated = await apiUpdateUserInfo(params);
             setUserInfo(updated);
             await completeFirstLogin();
+        } catch (error: any) {
+            handleApiError(error);
         } finally {
             setLoading(false);
         }
@@ -62,15 +89,25 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     useEffect(() => {
         if (!user?.isFirstLogin) {
             refreshUserInfo();
+            refreshMembership();
         } else {
             setUserInfo(null);
+            setMembership(null);
             setLoading(false);
         }
     }, [user]);
 
     return (
         <UserContext.Provider
-            value={{ userInfo, loading, refreshUserInfo, updateUserInfo }}
+            value={{
+                userInfo,
+                membership,
+                loading,
+                membershipLoading,
+                refreshUserInfo,
+                refreshMembership,
+                updateUserInfo
+            }}
         >
             {children}
         </UserContext.Provider>

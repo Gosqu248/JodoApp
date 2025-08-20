@@ -1,4 +1,4 @@
-import React, {useContext, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
     StyleSheet,
     Text,
@@ -7,88 +7,109 @@ import {
     ScrollView,
     SafeAreaView,
     StatusBar,
-    ActivityIndicator
+    ActivityIndicator,
+    Alert,
 } from 'react-native';
-import { AuthContext } from '@/context/AuthContext';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
-import { getMembership } from '@/api/membership';
-import { Membership } from '@/types/Membership';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'expo-router';
 import { getUserPhoto } from '@/api/user';
+import ChangePasswordModal from './ChangePasswordModal';
+import ChangePhotoModal from './ChangePhotoModal';
+import { formatPhoneNumber } from '@/utils/formatters';
+import { getLastPurchase } from '@/api/purchase';
+import {MembershipPurchase} from "@/types/MembershipPurchase";
+import SettingsSlidePanel from "@/components/user/SeetingsSidePanel";
+import {ErrorResponse} from "@/types/ErrorResponse";
+import { formatDate } from '@/utils/formatters';
 
 export default function UserProfileScreen() {
-    const { user, logout } = useContext(AuthContext);
-    const { userInfo, loading: userLoading } = useUser();
+    const { user, logout } = useAuth();
+    const { userInfo, membership, loading: userLoading, membershipLoading } = useUser();
+    const router = useRouter();
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(true);
-    const [membership, setMembership] = useState<Membership | null>(null);
-    const [membershipLoading, setMembershipLoading] = useState(true);
-    const router = useRouter();
+    const [settingsVisible, setSettingsVisible] = useState(false);
+    const [changePasswordVisible, setChangePasswordVisible] = useState(false);
+    const [changePhotoVisible, setChangePhotoVisible] = useState(false);
+    const [lastPurchase, setLastPurchase] = useState<MembershipPurchase | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (user?.id) {
             setPhotoLoading(true);
             getUserPhoto(user.id)
                 .then(uri => {
-                    setPhotoUri(uri);
+                    if (uri) {
+                        setPhotoUri(uri);
+                    }
+                })
+                .catch(error => {
+                    const errData = error?.response?.data as ErrorResponse;
+                    const message =
+                        errData?.message || error.message || 'Wystąpił nieoczekiwany błąd.';
+                    setError(message);
                 })
                 .finally(() => setPhotoLoading(false));
         }
     }, [user]);
 
     useEffect(() => {
-        const fetchMembership = async () => {
-            if (user?.id) {
+        const fetchLastPurchase = async () => {
+            if (membership?.id && membership.isActive) {
                 try {
-                    setMembershipLoading(true);
-                    const membershipData = await getMembership(user.id);
-                    setMembership(membershipData);
-                } catch (error) {
-                    console.error('Błąd przy pobieraniu danych membership:', error);
-                    setMembership(null);
-                } finally {
-                    setMembershipLoading(false);
+                    const purchase = await getLastPurchase(membership.id);
+                    setLastPurchase(purchase);
+                } catch (error: any) {
+                    const errData = error?.response?.data as ErrorResponse;
+                    const message =
+                        errData?.message || error.message || 'Wystąpił nieoczekiwany błąd.';
+                    setError(message);
                 }
             }
         };
+        fetchLastPurchase();
+    }, [membership?.id]);
 
-        fetchMembership();
-    }, [user]);
+    useEffect(() => {
+        if (error) {
+            Alert.alert("Błąd", error);
+            setError(null);
+        }
+    }, [error]);
 
+    const handleSettingsPress = useCallback(() => setSettingsVisible(true), []);
+    const handleCloseSettings = useCallback(() => setSettingsVisible(false), []);
+    const handleChangePassword = useCallback(() => {
+        setSettingsVisible(false);
+        setChangePasswordVisible(true);
+    }, []);
+    const handleChangePhoto = useCallback(() => {
+        setSettingsVisible(false);
+        setChangePhotoVisible(true);
+    }, []);
+    const handlePhotoUpdated = useCallback((newPhotoUri: string) => {
+        setPhotoUri(newPhotoUri);
+        setChangePhotoVisible(false);
+    }, []);
 
+    const handlePushToSchedule = useCallback(() => router.push('/schedule'), [router]);
+    const handlePushToActivity = useCallback(() => router.push('/activity'), [router]);
+    const handlePushToPurchase = useCallback(() => router.push('/purchase'), [router]);
+    const handlePushToRanking = useCallback(() => router.push('/ranking'), [router]);
+    const handlePushToMembershipTypes = useCallback(() => router.push('/membershipTypes'), [router]);
 
     if (userLoading || photoLoading || membershipLoading) return <ActivityIndicator />;
     if (!userInfo || !user) return null;
 
     const membershipExpiryDate = membership?.expiryDate ? new Date(membership.expiryDate) : null;
     const currentDate = new Date();
-    const isActive = membership ? membership.isActive : false;
+    const isActive = !!membership?.isActive;
+    const isFrozen = !!membership?.isFrozen;
     const daysLeft = membershipExpiryDate ?
         Math.ceil((membershipExpiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-
-    const formatDate = (date: Date) =>
-        date.toLocaleDateString('pl-PL', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-
-    const handleSettingsPress = () => {
-        console.log('Przejdź do ustawień');
-    };
-
-    const formatPhoneNumber = (number: string) => {
-        const cleaned = number.replace(/\D/g, '');
-
-        const chunks = [];
-        for (let i = 0; i < cleaned.length; i += 3) {
-            chunks.push(cleaned.slice(i, i + 3));
-        }
-
-        return chunks.join(' ');
-    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -104,6 +125,7 @@ export default function UserProfileScreen() {
                     <TouchableOpacity
                         style={styles.settingsButton}
                         onPress={handleSettingsPress}
+                        activeOpacity={0.8}
                     >
                         <Ionicons name="settings-outline" size={24} color="#000" />
                     </TouchableOpacity>
@@ -138,35 +160,40 @@ export default function UserProfileScreen() {
                     {membership ? (
                         <View style={styles.membershipCard}>
                             <View style={styles.membershipInfo}>
-                                <Text style={styles.membershipLabel}>Ważność do:</Text>
-                                <Text style={styles.membershipDate}>
-                                    {membershipExpiryDate ? formatDate(membershipExpiryDate) : 'Brak danych'}
-                                </Text>
+                                <View>
+                                    <Text style={styles.membershipLabel}>Ważność do:</Text>
+                                    <Text style={styles.membershipDate}>
+                                        {membershipExpiryDate ? formatDate(membershipExpiryDate) : 'Brak danych'}
+                                    </Text>
+                                </View>
                                 {isActive && daysLeft > 0 && (
                                     <Text style={styles.daysLeftText}>
                                         Pozostało {daysLeft} dni
                                     </Text>
                                 )}
-                                {membership.isFrozen && (
-                                    <Text style={styles.frozenText}>
-                                        Karnet jest zamrożony
-                                    </Text>
-                                )}
                             </View>
-                            <View
-                                style={[
-                                    styles.statusButton,
-                                    { backgroundColor: isActive ? '#4CAF50' : '#F44336' }
-                                ]}
-                            >
-                                <Ionicons
-                                    name={isActive ? 'checkmark-circle' : 'close-circle'}
-                                    size={20}
-                                    color="#fff"
-                                />
-                                <Text style={styles.statusText}>
-                                    {isActive ? 'Aktywny' : 'Nieaktywny'}
-                                </Text>
+
+                            <View style={styles.membershipInfo}>
+                                {isActive && (
+                                    <View style={styles.membershipNameContainer}>
+                                        <Text style={styles.membershipName}>{lastPurchase?.typeName}</Text>
+                                    </View>
+                                )}
+                                <View
+                                    style={[
+                                        styles.statusButton,
+                                        { backgroundColor: isFrozen ? '#36b2f4' : isActive ? '#4CAF50' : '#F44336' }
+                                    ]}
+                                >
+                                    <Ionicons
+                                        name={isActive ? 'checkmark-circle' : 'close-circle'}
+                                        size={20}
+                                        color="#fff"
+                                    />
+                                    <Text style={styles.statusText}>
+                                        {isFrozen ? 'Zamrożony' : isActive ? 'Aktywny' : 'Nieaktywny'}
+                                    </Text>
+                                </View>
                             </View>
                         </View>
                     ) : (
@@ -181,7 +208,7 @@ export default function UserProfileScreen() {
                 {/* Przycisk zajęć */}
                 <TouchableOpacity
                     style={styles.activityButton}
-                    onPress={() => router.push('/schedule')}
+                    onPress={handlePushToSchedule}
                 >
                     <Ionicons name="calendar-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Harmonogram zajęć</Text>
@@ -191,26 +218,37 @@ export default function UserProfileScreen() {
                 {/* Przycisk aktywności */}
                 <TouchableOpacity
                     style={styles.activityButton}
-                    onPress={() => router.push('/activity')}
+                    onPress={handlePushToActivity}
                 >
                     <Ionicons name="fitness-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Moja aktywność</Text>
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
 
+                {/* Przycisk historii zakupionych karnetów */}
+                <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={handlePushToPurchase}
+                >
+                    <Ionicons name="fitness-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Historia kupionych karnetów</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+
                 {/* Przycisk rankingu */}
                 <TouchableOpacity
                     style={styles.activityButton}
-                    onPress={() => router.push('/ranking')}
+                    onPress={handlePushToRanking}
                 >
                     <Ionicons name="trophy-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Ranking</Text>
                     <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
 
+                {/* Przycisk dostępnych karnetów */}
                 <TouchableOpacity
                     style={styles.activityButton}
-                    onPress={() => router.push('/membershipTypes')}
+                    onPress={handlePushToMembershipTypes}
                 >
                     <Ionicons name="card-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Dostępne karnety</Text>
@@ -268,6 +306,26 @@ export default function UserProfileScreen() {
                     <Text style={styles.logoutText}>Wyloguj się</Text>
                 </TouchableOpacity>
             </ScrollView>
+            {/* Settings Slide Panel */}
+            <SettingsSlidePanel
+                visible={settingsVisible}
+                onClose={handleCloseSettings}
+                onChangePassword={handleChangePassword}
+                onChangePhoto={handleChangePhoto}
+            />
+
+            {/* Change Password Modal */}
+            <ChangePasswordModal
+                visible={changePasswordVisible}
+                onClose={() => setChangePasswordVisible(false)}
+            />
+
+            {/* Change Photo Modal */}
+            <ChangePhotoModal
+                visible={changePhotoVisible}
+                onClose={() => setChangePhotoVisible(false)}
+                onPhotoUpdated={handlePhotoUpdated}
+            />
         </SafeAreaView>
     );
 }
@@ -351,12 +409,14 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3
     },
-    membershipInfo: { flex: 1 },
+    membershipInfo: { flex: 1, gap: 5 },
     membershipLabel: { fontSize: 16, color: '#666', marginBottom: 5 },
     membershipDate: { fontSize: 20, fontWeight: 'bold', color: '#000', marginBottom: 3 },
-    daysLeftText: { fontSize: 14, color: '#ffc500', fontWeight: '600' },
+    daysLeftText: { fontSize: 16, color: '#ffc500', fontWeight: '600' },
     frozenText: { fontSize: 14, color: '#FF9800', fontWeight: '600', marginTop: 3 },
     statusButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginLeft: 15 },
+    membershipNameContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+    membershipName: { fontSize: 16, fontWeight: '600', color: '#000' },
     statusText: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginLeft: 5 },
     noMembershipText: { fontSize: 16, color: '#666', textAlign: 'center', flex: 1 },
     activityButton: {
@@ -389,5 +449,5 @@ const styles = StyleSheet.create({
     infoValue: { fontSize: 17, color: '#000', fontWeight: '600' },
     divider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 12 },
     logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', borderRadius: 12, padding: 16, marginTop: 10 },
-    logoutText: { color: '#ffc500', fontSize: 16, fontWeight: '600', marginLeft: 8 }
+    logoutText: { color: '#ffc500', fontSize: 16, fontWeight: '600', marginLeft: 8 },
 });

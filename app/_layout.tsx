@@ -3,6 +3,7 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -35,44 +36,53 @@ export default function RootLayout() {
     }
 
     return (
-        <AuthProvider>
-            <UserProvider>
-                <ThemeProvider value={DefaultTheme}>
-                    <LocationInitializer />
-                    <Stack>
-                        <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Konto' }} />
-                        <Stack.Screen
-                            name="activity"
-                            options={{
-                                title: 'Moja aktywność',
-                                headerShown: true,
-                            }}
-                        />
-                        <Stack.Screen
-                            name="schedule"
-                            options={{
-                                title: 'Harmonogram zajęć',
-                                headerShown: true,
-                            }}
-                        />
-                        <Stack.Screen
-                            name="ranking"
-                            options={{
-                                title: 'Ranking',
-                                headerShown: true,
-                            }}
-                        />
-                        <Stack.Screen
-                            name="membershipTypes"
-                            options={{
-                                title: 'Dostępne karnety',
-                                headerShown: true,
-                            }}
-                        />
-                    </Stack>
-                    <StatusBar style="auto" />
-                </ThemeProvider>
-            </UserProvider>
-        </AuthProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <AuthProvider>
+                <UserProvider>
+                    <ThemeProvider value={DefaultTheme}>
+                        <LocationInitializer />
+                        <Stack>
+                            <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Konto' }} />
+                            <Stack.Screen
+                                name="activity"
+                                options={{
+                                    title: 'Moja aktywność',
+                                    headerShown: true,
+                                }}
+                            />
+                            <Stack.Screen
+                                name="schedule"
+                                options={{
+                                    title: 'Harmonogram zajęć',
+                                    headerShown: true,
+                                }}
+                            />
+                            <Stack.Screen
+                                name="ranking"
+                                options={{
+                                    title: 'Ranking',
+                                    headerShown: true,
+                                }}
+                            />
+                            <Stack.Screen
+                                name="membershipTypes"
+                                options={{
+                                    title: 'Dostępne karnety',
+                                    headerShown: true,
+                                }}
+                            />
+                            <Stack.Screen
+                                name="purchase"
+                                options={{
+                                    title: 'Historia kupionych karnetów',
+                                    headerShown: true,
+                                }}
+                            />
+                        </Stack>
+                        <StatusBar style="auto" />
+                    </ThemeProvider>
+                </UserProvider>
+            </AuthProvider>
+        </GestureHandlerRootView>
     );
 }

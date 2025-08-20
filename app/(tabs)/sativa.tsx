@@ -8,7 +8,7 @@ import {
     ListRenderItemInfo,
     SafeAreaView,
     StatusBar,
-    Image,
+    Image, Platform,
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { publicApi } from '@/api/client';
@@ -187,7 +187,8 @@ export default function SativaScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff'
+        backgroundColor: '#fff',
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     header: {
         paddingBottom: 15,

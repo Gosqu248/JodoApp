@@ -13,63 +13,29 @@ import {
 } from 'react-native';
 import {Image} from 'expo-image';
 import {Ionicons} from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import {useUser} from '@/context/UserContext';
+import {useAuth} from '@/context/AuthContext';
+import {useRouter} from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import {useImagePicker} from "@/utils/useImagePicker";
+import {formatDate} from "@/utils/formatters";
 
 export default function UserSetupScreen() {
-    const {updateUserInfo} = useUser();
+    const {updateUserInfo, loading} = useUser();
+    const {logout} = useAuth();
+    const router = useRouter();
+    const {selectedImage, showImagePicker} = useImagePicker();
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [birthDate, setBirthDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [profileImage, setProfileImage] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
 
     const handleDateChange = (event: any, selectedDate?: Date) => {
         const currentDate = selectedDate || birthDate;
         setShowDatePicker(Platform.OS === 'ios');
         setBirthDate(currentDate);
-    };
-
-    const pickImageFromLibrary = async () => {
-        const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Błąd', 'Potrzebujemy uprawnień do dostępu do galerii!');
-            return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
-        }
-    };
-
-    const takePhoto = async () => {
-        const {status} = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Błąd', 'Potrzebujemy uprawnień do kamery!');
-            return;
-        }
-
-        const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
-
-        if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
-        }
     };
 
     const handleSubmit = async () => {
@@ -78,33 +44,28 @@ export default function UserSetupScreen() {
             return;
         }
 
-        if (!profileImage) {
+        if (!selectedImage) {
             Alert.alert('Błąd', 'Proszę dodać zdjęcie profilowe');
             return;
         }
 
-        setLoading(true);
-        try {
-            await updateUserInfo({
-                firstName: firstName.trim(),
-                lastName: lastName.trim(),
-                phoneNumber: phoneNumber.trim(),
-                birthDate: birthDate.toISOString(),
-                profileImageUri: profileImage!,
-            });
-        } catch (e) {
-            Alert.alert('Błąd', 'Nie udało się zapisać danych.');
-        } finally {
-            setLoading(false);
-        }
+        await updateUserInfo({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            phoneNumber: phoneNumber.trim(),
+            birthDate: birthDate.toISOString(),
+            profileImageUri: selectedImage!,
+        });
     };
 
-    const formatDate = (date: Date) =>
-        date.toLocaleDateString('pl-PL', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
+    const handleLogout = async () => {
+        try {
+            await logout();
+            router.push('/(tabs)');
+        } catch (e) {
+            Alert.alert('Błąd', 'Nie udało się wylogować.');
+        }
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -189,38 +150,29 @@ export default function UserSetupScreen() {
                     <Text style={styles.sectionTitle}>Zdjęcie profilowe</Text>
                     <View style={styles.photoCard}>
                         <View style={styles.photoContainer}>
-                            {profileImage ? (
+                            {selectedImage ? (
                                 <Image
-                                    source={{uri: profileImage}}
+                                    source={{uri: selectedImage}}
                                     style={styles.profileImage}
                                     contentFit="cover"
                                 />
                             ) : (
                                 <View style={styles.placeholderImage}>
                                     <Ionicons name="person-outline" size={60} color="#999"/>
+                                    <Text style={styles.placeholderText}>Wybierz zdjęcie</Text>
                                 </View>
                             )}
                         </View>
 
-                        <View style={styles.photoButtonsContainer}>
-                            <TouchableOpacity
-                                style={styles.photoButton}
-                                onPress={takePhoto}
-                            >
-                                <Ionicons name="camera-outline" size={20} color="#ffc500"/>
-                                <Text style={styles.photoButtonText}>Zrób zdjęcie</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.photoButton}
-                                onPress={pickImageFromLibrary}
-                            >
-                                <Ionicons name="images-outline" size={20} color="#ffc500"/>
-                                <Text style={styles.photoButtonText}>
-                                    {profileImage ? 'Zmień z galerii' : 'Dodaj z galerii'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.photoButton}
+                            onPress={showImagePicker}
+                        >
+                            <Ionicons name="camera" size={20} color="#ffc500"/>
+                            <Text style={styles.photoButtonText}>
+                                {selectedImage ? 'Zmień zdjęcie' : 'Wybierz zdjęcie'}
+                            </Text>
+                        </TouchableOpacity>
 
                         <View style={styles.photoInfo}>
                             <Ionicons name="shield-checkmark-outline" size={24} color="#4CAF50"/>
@@ -247,6 +199,15 @@ export default function UserSetupScreen() {
                         </>
                     )}
                 </TouchableOpacity>
+
+                {/* Przycisk powrotu */}
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={handleLogout}
+                >
+                    <Ionicons name="arrow-back" size={20} color="#000" />
+                    <Text style={styles.submitButtonText}>Powrót do logowania</Text>
+                </TouchableOpacity>
             </ScrollView>
         </SafeAreaView>
     );
@@ -256,6 +217,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     scrollContainer: {
         padding: 20,
@@ -332,7 +294,7 @@ const styles = StyleSheet.create({
     photoCard: {
         backgroundColor: '#fff',
         borderRadius: 16,
-        padding: 10,
+        padding: 20,
         borderWidth: 2,
         borderColor: '#ffc500',
         shadowColor: '#000',
@@ -343,12 +305,12 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     photoContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 20,
+        width: 150,
+        height: 150,
+        borderRadius: 25,
         backgroundColor: '#f0f0f0',
         marginBottom: 20,
-        overflow: 'hidden'
+        overflow: 'hidden',
     },
     profileImage: {
         width: '100%',
@@ -359,20 +321,31 @@ const styles = StyleSheet.create({
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5'
+        backgroundColor: '#f5f5f5',
+        borderWidth: 2,
+        borderColor: '#e0e0e0',
+        borderStyle: 'dashed',
+    },
+    placeholderText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 8,
+        textAlign: 'center',
     },
     photoButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#000',
-        paddingHorizontal: 10,
-        paddingVertical: 12,
-        borderRadius: 10,
-        marginBottom: 20
+        justifyContent: 'center',
+        backgroundColor: '#f8f9fa',
+        borderRadius: 12,
+        paddingVertical: 16,
+        paddingHorizontal: 50,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
     },
     photoButtonText: {
-        color: '#ffc500',
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
         marginLeft: 8
     },
@@ -383,7 +356,8 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#4CAF50'
+        borderColor: '#4CAF50',
+        width: '100%'
     },
     photoInfoText: {
         flex: 1,
@@ -391,13 +365,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#2E7D32',
         lineHeight: 20
-    },
-    photoButtonsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        width: '100%',
-        marginBottom: 10,
-        gap: 5
     },
     submitButton: {
         flexDirection: 'row',
@@ -407,7 +374,6 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 16,
         marginTop: 10,
-        marginBottom: 40
     },
     submitButtonDisabled: {
         backgroundColor: '#ccc'
@@ -417,5 +383,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 8
-    }
+    },
+    backButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#cccac9',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 30,
+        marginBottom: 40
+    },
 });

@@ -1,6 +1,6 @@
 import {User} from "@/types/User";
 import {AuthResponse} from "@/types/AuthResponse";
-import {publicApi} from "@/api/client";
+import {privateApi, publicApi} from "@/api/client";
 import * as SecureStore from "expo-secure-store";
 import {ResultResponse} from "@/types/ResultResponse";
 
@@ -8,6 +8,7 @@ export type LoginParams = { email: string, password: string};
 export type RegisterParams = { email: string, password: string };
 export type ResetCodeParams = { email: string, code: string };
 export type ResetPasswordParams = { email: string, newPassword: string, confirmNewPassword: string };
+export type ChangePasswordRequest = { currentPassword: string, newPassword: string, confirmNewPassword: string };
 
 export const login = async (params: LoginParams): Promise<AuthResponse> => {
     const { data } = await publicApi.post<AuthResponse>('/auth/login', params);
@@ -37,6 +38,11 @@ export const resetPassword = async (params: ResetPasswordParams): Promise<Result
     const { data } = await publicApi.post<ResultResponse>("/auth/reset-password", params);
     return data;
 };
+
+export const changePassword = async (params: ChangePasswordRequest): Promise<ResultResponse> => {
+    const { data } = await privateApi.put<ResultResponse>("/auth/change-password", params);
+    return data;
+}
 
 export const logout = async (): Promise<void> => {
     await SecureStore.deleteItemAsync("accessToken");

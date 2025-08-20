@@ -9,7 +9,7 @@ interface AuthContextValue {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (email: string, password: string) => Promise<boolean>;
+    register: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     completeFirstLogin: () => Promise<void>;
 }
@@ -18,7 +18,7 @@ export const AuthContext = createContext<AuthContextValue>({
     user: null,
     loading: false,
     login: async () => {},
-    register: async () => false,
+    register: async () => {},
     logout: async () => {},
     completeFirstLogin: async () => {}
 });
@@ -40,24 +40,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     const login = async (email: string, password: string) => {
         setLoading(true);
-        try {
             const authResponse: AuthResponse = await doLogin({ email, password });
             setUser(authResponse.user);
-        } catch (error) {
-            await doLogout();
-            console.error('Login failed:', error);
-        } finally {
-            setLoading(false);
-        }
     };
 
     const register = async (email: string, password: string) => {
-        try {
-            await doRegister({ email, password });
-            return true;
-        } catch {
-            return false;
-        }
+        await doRegister({ email, password });
     };
 
     const logout = async () => {

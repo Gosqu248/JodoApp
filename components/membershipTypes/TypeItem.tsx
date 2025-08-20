@@ -8,51 +8,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MembershipType } from "@/types/MembershipType";
+import { formatDuration, formatPrice } from "@/utils/formatters";
 
+interface TypeItemProps {
+    membershipType: MembershipType;
+}
 
-export default function TypeItem({ membershipType }: MembershipType) {
-
-    const duration = (durationMonths: number, durationWeeks: number): string => {
-       if (durationMonths === 0 && durationWeeks === 0) {
-           return "Jednorazowy dostęp";
-       }
-
-        const monthsText = formatMonths(durationMonths);
-        const weeksText = formatWeeks(durationWeeks);
-
-        if (monthsText && weeksText) {
-            return `${monthsText} i ${weeksText}`;
-        }
-
-        return monthsText || weeksText;
-    }
-
-    const formatMonths = (months: number): string => {
-        if (months === 0) {
-            return '';
-        } else if (months === 1) {
-            return '1 miesiąc';
-        } else {
-            return `${months} miesiące`;
-        }
-    }
-
-    const formatWeeks = (weeks: number): string => {
-        if (weeks === 0) {
-            return '';
-        } else if (weeks === 1) {
-            return '1 tydzień';
-        } else {
-            return `${weeks} tygodnie`;
-        }
-    };
-
-    const formatPrice = (price: number): string => {
-        return price.toLocaleString('pl-PL', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
-        });
-    };
+export default function TypeItem({ membershipType }: TypeItemProps) {
 
     const getTypeIcon = (): keyof typeof Ionicons.glyphMap => {
         const isOneTime = (!membershipType.durationMonths || membershipType.durationMonths === 0) &&
@@ -120,7 +82,7 @@ export default function TypeItem({ membershipType }: MembershipType) {
                     <View style={styles.content}>
                         <Text style={styles.name}>{membershipType.name}</Text>
                         <Text style={styles.duration}>
-                            {duration(membershipType.durationMonths, membershipType.durationWeeks)}
+                            {formatDuration(membershipType)}
                         </Text>
 
                         {membershipType.withExercises && (

@@ -1,6 +1,6 @@
-import { privateApi } from '@/api/client';
-import { UserInfo } from '@/types/UserInfo';
-import { apiUrl } from '@/api/apiUrl';
+import {privateApi} from '@/api/client';
+import {UserInfo} from '@/types/UserInfo';
+import { Buffer } from 'buffer';
 
 export type UpdateUserInfoParams = {
     firstName: string;
@@ -50,12 +50,38 @@ export const updateUserInfo = async (params: UpdateUserInfoParams): Promise<User
 };
 
 export const getUserPhoto = async (userId: string): Promise<string | null> => {
-    try {
-        const photoUri = `${apiUrl}/users/info/${userId}/photo`;
-        await privateApi.get(`/users/info/${userId}/photo`, { responseType: 'blob' });
-        return photoUri;
-    } catch (error) {
-        console.error('Error loading photo:', error);
-        return null;
-    }
+        const response = await privateApi.get(`/users/info/${userId}/photo`, {
+            responseType: 'arraybuffer',
+        });
+
+        const base64 = Buffer.from(response.data, 'binary').toString('base64');
+        const mimeType = response.headers['content-type'] || 'image/jpeg';
+
+        return `data:${mimeType};base64,${base64}`;
+};
+
+export const updateUserPhoto = async (photoUri: string): Promise<UserInfo> => {
+    const filename = photoUri.split('/').pop()!;
+    const match = /\.(\w+)$/.exec(filename);
+    const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+
+    const formData = new FormData();
+    formData.append('photo', {
+        uri: photoUri,
+        name: filename,
+        type: mimeType,
+    } as any);
+
+        const { data } = await privateApi.patch<UserInfo>(
+            '/users/info/photo',
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Accept': 'application/json'
+                },
+                timeout: 30000
+            }
+        );
+        return data;
 };
