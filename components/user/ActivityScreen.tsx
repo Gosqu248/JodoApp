@@ -340,7 +340,6 @@ export default function ActivityScreen() {
         </SafeAreaView>
     );
 }
-// Skopiuj tutaj sekcję `styles` z oryginalnego pliku
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', paddingBottom: Platform.OS === 'android' ? 25 : 0},
     scrollContainer: { padding: 20, paddingBottom: 80 },
