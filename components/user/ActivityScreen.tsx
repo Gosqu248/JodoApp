@@ -86,7 +86,6 @@ export default function ActivityScreen() {
 
             setActivityStatus(stats);
         } catch (error) {
-            console.error('Error fetching stats:', error);
             Alert.alert('Błąd', 'Nie udało się pobrać statystyk aktywności');
         } finally {
             setLoading(false);
@@ -98,7 +97,7 @@ export default function ActivityScreen() {
             const count = await getUsersOnGym();
             setOnGymCount(count);
         } catch (error) {
-            console.error('Błąd przy pobieraniu liczby osób na siłowni:', error);
+            Alert.alert('Błąd', 'Błąd przy pobieraniu liczby osób na siłowni');
         }
     }
 
@@ -341,7 +340,7 @@ export default function ActivityScreen() {
         </SafeAreaView>
     );
 }
-
+// Skopiuj tutaj sekcję `styles` z oryginalnego pliku
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', paddingBottom: Platform.OS === 'android' ? 25 : 0},
     scrollContainer: { padding: 20, paddingBottom: 80 },

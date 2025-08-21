@@ -26,7 +26,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/Jodo.png",
+        "foregroundImage": "./assets/images/StartLogo.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
@@ -42,7 +42,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/Jodo.png"
+      "favicon": "./assets/images/StartLogo.png"
     },
     "plugins": [
       "expo-router",
@@ -59,12 +59,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/Jodo.png",
+          "image": "./assets/images/StartLogo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#000000",
           "dark": {
-            "image": "./assets/images/Jodo.png",
+            "image": "./assets/images/StartLogo.png",
             "backgroundColor": "#000000"
           }
         }

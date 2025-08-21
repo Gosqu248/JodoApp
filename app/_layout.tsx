@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -9,28 +9,67 @@ import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { UserProvider } from '@/context/UserContext';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
+import { registerForPushNotificationsAsync } from "@/utils/notifications";
 
 function LocationInitializer() {
     const { user } = useAuth();
     const { startTracking } = useLocationTracking(user?.id || null);
+    const isInitialized = useRef(false);
+    const initializationTimeout = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        if (user?.id) {
-            // Małe opóźnienie aby pozwolić na załadowanie UI
-            setTimeout(() => {
-                startTracking();
+        // Rejestracja powiadomień (tylko raz)
+        if (!isInitialized.current) {
+            registerForPushNotificationsAsync().catch(console.error);
+        }
+
+        // Inicjalizacja śledzenia dla zalogowanego użytkownika
+        if (user?.id && !isInitialized.current) {
+            // Czyścimy poprzedni timeout jeśli istnieje
+            if (initializationTimeout.current) {
+                clearTimeout(initializationTimeout.current);
+            }
+
+            // Opóźnienie dla pewności, że wszystko jest zainicjalizowane
+            initializationTimeout.current = setTimeout(() => {
+                if (!isInitialized.current) {
+                    console.log('Inicjalizacja śledzenia lokalizacji dla użytkownika:', user.id);
+                    startTracking()
+                        .then(() => {
+                            isInitialized.current = true;
+                            console.log('Śledzenie lokalizacji zostało uruchomione');
+                        })
+                        .catch((error) => {
+                            console.error('Błąd podczas inicjalizacji śledzenia:', error);
+                        });
+                }
             }, 1000);
         }
+
+        // Cleanup - resetuj stan gdy użytkownik się wyloguje
+        if (!user?.id && isInitialized.current) {
+            isInitialized.current = false;
+        }
+
+        // Cleanup timeout przy odmontowaniu
+        return () => {
+            if (initializationTimeout.current) {
+                clearTimeout(initializationTimeout.current);
+                initializationTimeout.current = null;
+            }
+        };
     }, [user?.id, startTracking]);
 
     return null;
 }
+
 
 export default function RootLayout() {
     const [loaded] = useFonts({
         SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     });
 
+    // Czekaj na załadowanie fontów
     if (!loaded) {
         return null;
     }
@@ -41,13 +80,21 @@ export default function RootLayout() {
                 <UserProvider>
                     <ThemeProvider value={DefaultTheme}>
                         <LocationInitializer />
+
                         <Stack>
-                            <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Konto' }} />
+                            <Stack.Screen
+                                name="(tabs)"
+                                options={{
+                                    headerShown: false,
+                                    title: 'Konto'
+                                }}
+                            />
                             <Stack.Screen
                                 name="activity"
                                 options={{
                                     title: 'Moja aktywność',
                                     headerShown: true,
+                                    headerBackTitle: 'Wstecz',
                                 }}
                             />
                             <Stack.Screen
@@ -55,6 +102,7 @@ export default function RootLayout() {
                                 options={{
                                     title: 'Harmonogram zajęć',
                                     headerShown: true,
+                                    headerBackTitle: 'Wstecz',
                                 }}
                             />
                             <Stack.Screen
@@ -62,6 +110,7 @@ export default function RootLayout() {
                                 options={{
                                     title: 'Ranking',
                                     headerShown: true,
+                                    headerBackTitle: 'Wstecz',
                                 }}
                             />
                             <Stack.Screen
@@ -69,16 +118,19 @@ export default function RootLayout() {
                                 options={{
                                     title: 'Dostępne karnety',
                                     headerShown: true,
+                                    headerBackTitle: 'Wstecz',
                                 }}
                             />
                             <Stack.Screen
                                 name="purchase"
                                 options={{
-                                    title: 'Historia kupionych karnetów',
+                                    title: 'Historia karnetów',
                                     headerShown: true,
+                                    headerBackTitle: 'Wstecz',
                                 }}
                             />
                         </Stack>
+
                         <StatusBar style="auto" />
                     </ThemeProvider>
                 </UserProvider>

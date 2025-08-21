@@ -7,7 +7,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 
 
 export default function TabLayout() {
@@ -22,9 +22,12 @@ export default function TabLayout() {
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            position: 'absolute',
+              position: 'absolute',
+              backgroundColor: Colors['light'].background,
           },
-          default: {},
+          default: {
+              backgroundColor: Colors['light'].background,
+          },
         }),
       }}>
       <Tabs.Screen
@@ -45,7 +48,7 @@ export default function TabLayout() {
             name="sativa"
             options={{
                 title: 'Sativa Life',
-                tabBarIcon: ({ color }) => <Icon size={28} name="heart-circle" color={color} />,
+                tabBarIcon: ({ color }) => <Ionicons size={28} name="heart-circle" color={color} />,
             }}
         />
     </Tabs>

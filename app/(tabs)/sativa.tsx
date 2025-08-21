@@ -32,8 +32,10 @@ export default function SativaScreen() {
         try {
             const { data } = await publicApi.get<SativaCategory[]>('/sativa-categories');
             setCategories(data);
-        } catch (error) {
-            console.error('Błąd pobierania kategorii:', error);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+            setRefreshing(false);
         }
     };
 
@@ -57,9 +59,7 @@ export default function SativaScreen() {
             );
             setPage(data.pageNumber);
             setTotalPages(data.totalPages);
-        } catch (error) {
-            console.error('Błąd pobierania produktów:', error);
-        } finally {
+        }  finally {
             setLoading(false);
             setLoadingMore(false);
             setRefreshing(false);
