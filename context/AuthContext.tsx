@@ -65,7 +65,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                     if (storedUser) setUser(JSON.parse(storedUser));
                     console.log('Token refresh successful');
                 } catch (error) {
-                    console.error('Token refresh failed:', error);
                     await doLogout();
                     setUser(null);
                 } finally {
