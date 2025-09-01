@@ -1,0 +1,20 @@
+*.log
+*.tmp
+tests/
+docs/
+
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+.git/
+.gitignore
+
+android/
+.idea/
+ios/
+.vscode/

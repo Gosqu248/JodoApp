@@ -4,7 +4,7 @@
     "slug": "JodoApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/JodoLOGO.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "jodoapp",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -26,7 +26,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/StartLogo.png",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
@@ -42,7 +42,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/StartLogo.png"
+      "favicon": "./assets/images/JodoLOGO.png"
     },
     "plugins": [
       "expo-router",
@@ -59,14 +59,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/SplashScreen.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
+          "image": "./assets/images/adaptive-icon.png",
           "backgroundColor": "#000000",
           "dark": {
-            "image": "./assets/images/SplashScreen.png",
+            "image": "./assets/images/splash.png",
             "backgroundColor": "#000000"
-          }
+          },
+          "imageWidth": 200
         }
       ]
     ],
