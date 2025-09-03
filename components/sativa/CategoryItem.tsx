@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
         minWidth: 80,
     },
     selectedCategory: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#e4131d',
     },
     categoryImage: {
         width: 50,

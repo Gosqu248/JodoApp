@@ -97,7 +97,7 @@ export default function PostsScreen() {
 
     return (
         <View style={styles.container}>
-            <SafeAreaView style={styles.topSafeArea} edges={['top']}>
+            <SafeAreaView edges={['top']}>
                 <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
                 <View style={styles.header}>
                     <ThemedText style={styles.headerTitle}>🏋️ Aktualności</ThemedText>
@@ -132,7 +132,6 @@ const styles = StyleSheet.create({
     },
     header: {
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-
     },
     headerTitle: {
         fontSize: 28,

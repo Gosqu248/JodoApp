@@ -12,7 +12,7 @@ import { calculateDistance } from '@/utils/calculateDistance';
 const GYM_COORDINATES = {
     latitude: 49.84906983966339, //49.813937 poprawne
     longitude: 20.74353823284158, //20.680089 poprawne
-    radius: 10, // 18 poprawne
+    radius: 5, // 18 poprawne
 } as const;
 
 const LOCATION_TASK_NAME = 'background-location-task';

@@ -8,12 +8,13 @@ import {
     ActivityIndicator,
     Alert,
     RefreshControl,
-    TouchableOpacity, Platform
+    TouchableOpacity,
+    Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ActivityStatus } from '@/types/ActivityStatus';
-import { getWeeklyStats, getMonthlyStats, getTotalActivity, getUsersOnGym} from '@/api/activity';
+import { getWeeklyStats, getMonthlyStats, getTotalActivity, getUsersOnGym, PaginationParams} from '@/api/activity';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
 import { formatActivityDuration } from '@/utils/formatters';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,6 +28,9 @@ export default function ActivityScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [onGymCount, setOnGymCount] = useState<number>(0);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [hasMorePages, setHasMorePages] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     const { currentActivity, isInGym } = useLocationTracking(user?.id || null);
 
@@ -53,7 +57,8 @@ export default function ActivityScreen() {
         useCallback(() => {
             if (user?.id) {
                 fetchOnGymCount();
-                fetchStats();
+                setCurrentPage(0);
+                fetchStats(0, true);
             }
         }, [selectedStats, user?.id])
     );
@@ -62,33 +67,63 @@ export default function ActivityScreen() {
         if (user?.id && !currentActivity) {
             const timer = setTimeout(() => {
                 fetchOnGymCount();
-                fetchStats();
+                setCurrentPage(0);
+                fetchStats(0, true);
             }, 1000);
             return () => clearTimeout(timer);
         }
     }, [currentActivity, user?.id]);
 
-    const fetchStats = useCallback(async () => {
+    const fetchStats = useCallback(async (page: number = 0, reset: boolean = false) => {
         if (!user?.id) return;
-        setLoading(true);
+
+        if (reset) {
+            setLoading(true);
+        } else {
+            setLoadingMore(true);
+        }
+
         try {
+            const pagination: PaginationParams = {
+                page,
+                size: 10
+            };
+
             let stats: ActivityStatus;
 
             if (selectedStats === 'total') {
-                stats = await getTotalActivity(user.id);
+                stats = await getTotalActivity(user.id, pagination);
             } else if (selectedStats === 'weekly') {
                 const weekStart = getWeekStart(new Date()).toISOString().split('T')[0];
-                stats = await getWeeklyStats(user.id, weekStart);
+                stats = await getWeeklyStats(user.id, weekStart, pagination);
             } else {
                 const monthStart = getMonthStart(new Date()).toISOString().split('T')[0];
-                stats = await getMonthlyStats(user.id, monthStart);
+                stats = await getMonthlyStats(user.id, monthStart, pagination);
             }
 
-            setActivityStatus(stats);
+            if (reset) {
+                setActivityStatus(stats);
+            } else {
+                setActivityStatus(prev => {
+                    if (!prev) return stats;
+                    return {
+                        ...stats,
+                        activities: {
+                            ...stats.activities,
+                            content: [...prev.activities.content, ...stats.activities.content]
+                        }
+                    };
+                });
+            }
+
+            const hasMore = page < stats.activities.totalPages - 1;
+            setHasMorePages(hasMore);
+
         } catch (error) {
             Alert.alert('Błąd', 'Nie udało się pobrać statystyk aktywności');
         } finally {
             setLoading(false);
+            setLoadingMore(false);
         }
     }, [user?.id, selectedStats]);
 
@@ -99,13 +134,22 @@ export default function ActivityScreen() {
         } catch (error) {
             Alert.alert('Błąd', 'Błąd przy pobieraniu liczby osób na siłowni');
         }
-    }
+    };
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await fetchStats();
+        setCurrentPage(0);
+        await fetchStats(0, true);
         await fetchOnGymCount();
         setRefreshing(false);
+    };
+
+    const handleLoadMore = () => {
+        if (hasMorePages && !loadingMore) {
+            const nextPage = currentPage + 1;
+            setCurrentPage(nextPage);
+            fetchStats(nextPage, false);
+        }
     };
 
     const getWeekStart = (date: Date) => {
@@ -162,10 +206,7 @@ export default function ActivityScreen() {
                     />
                 }
             >
-
-                <View
-                    style={styles.activityButton}
-                >
+                <View style={styles.activityButton}>
                     <Ionicons name="fitness-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Ilość osób na siłowni: {onGymCount}</Text>
                 </View>
@@ -174,7 +215,7 @@ export default function ActivityScreen() {
                     <Text style={styles.title}>Moja aktywność</Text>
                 </View>
 
-                {/* Pokaż kartę aktualnej aktywności tylko gdy jest aktywna */}
+                {/* Show current activity card only when active */}
                 {currentActivity && statusInfo && (
                     <View style={[
                         styles.currentActivityCard,
@@ -264,18 +305,18 @@ export default function ActivityScreen() {
                                         color="#4CAF50"
                                     />
                                     <Text style={styles.statValue}>
-                                        {activityStatus.sessionsCount}
+                                        {activityStatus.activities.totalElements}
                                     </Text>
                                     <Text style={styles.statLabel}>Sesje</Text>
                                 </View>
                             </View>
 
-                            {activityStatus.activities.length > 0 && (
+                            {activityStatus.activities.content.length > 0 && (
                                 <View style={styles.activitiesSection}>
                                     <Text style={styles.sectionTitle}>
                                         Historia aktywności
                                     </Text>
-                                    {activityStatus.activities.map((activity) => (
+                                    {activityStatus.activities.content.map((activity) => (
                                         <View
                                             key={activity.id}
                                             style={styles.activityItem}
@@ -317,6 +358,24 @@ export default function ActivityScreen() {
                                             </View>
                                         </View>
                                     ))}
+
+                                    {/* Load More Button */}
+                                    {hasMorePages && (
+                                        <TouchableOpacity
+                                            style={styles.loadMoreButton}
+                                            onPress={handleLoadMore}
+                                            disabled={loadingMore}
+                                        >
+                                            {loadingMore ? (
+                                                <ActivityIndicator size="small" color="#ffc500" />
+                                            ) : (
+                                                <>
+                                                    <Ionicons name="chevron-down" size={20} color="#ffc500" />
+                                                    <Text style={styles.loadMoreText}>Załaduj więcej</Text>
+                                                </>
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             )}
                         </>
@@ -340,6 +399,7 @@ export default function ActivityScreen() {
         </SafeAreaView>
     );
 }
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', paddingBottom: Platform.OS === 'android' ? 25 : 0},
     scrollContainer: { padding: 20, paddingBottom: 80 },
@@ -477,6 +537,29 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#ffc500'
+    },
+
+    loadMoreButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 10,
+        borderWidth: 2,
+        borderColor: '#ffc500',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    loadMoreText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#ffc500',
+        marginLeft: 8
     },
 
     noDataContainer: { alignItems: 'center', paddingVertical: 40 },

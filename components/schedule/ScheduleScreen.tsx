@@ -8,16 +8,18 @@ import {
     Modal,
     Alert,
     StyleSheet,
-    SafeAreaView, Platform, StatusBar,
+    SafeAreaView,
+    Platform,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { getCurrentWeekSchedule } from '@/api/schedule';
 import { WeeklySchedule } from "@/types/WeeklySchedule";
 import { Booking } from "@/types/Booking";
 import { Schedule } from "@/types/Schedule";
-import { getUserBookings, createClassBooking, cancelClassBooking } from "@/api/booking";
+import { getUserBookings, createClassBooking, cancelClassBooking, BookingPaginationParams } from "@/api/booking";
 import ScheduleTab from './ScheduleTab';
 import BookingsTab from './BookingTab';
+import { formatTime } from '@/utils/formatters';
 
 const DAYS_PL = {
     MONDAY: 'Poniedziałek',
@@ -36,16 +38,16 @@ export default function ScheduleScreen() {
     const { user } = useAuth();
     const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule | null>(null);
     const [userBookings, setUserBookings] = useState<Booking[]>([]);
+    const [totalBookings, setTotalBookings] = useState(0);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedClass, setSelectedClass] = useState<Schedule | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [activeTab, setActiveTab] = useState<'schedule' | 'bookings'>('schedule');
 
-    const formatTime = (timeString: string): string => {
-        const [hours, minutes] = timeString.split(':');
-        return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-    };
+    const [currentBookingsPage, setCurrentBookingsPage] = useState(0);
+    const [hasMoreBookings, setHasMoreBookings] = useState(false);
+    const [loadingMoreBookings, setLoadingMoreBookings] = useState(false);
 
     const getWeekDateRange = (yearWeek: string): string => {
         const [year, weekStr] = yearWeek.split('-');
@@ -68,23 +70,61 @@ export default function ScheduleScreen() {
         return `${formatDate(monday)} - ${formatDate(friday)}`;
     };
 
+    const loadBookings = useCallback(async (page: number = 0, reset: boolean = false) => {
+        if (!user?.id) return;
+
+        if (reset) {
+            setLoading(true);
+        } else {
+            setLoadingMoreBookings(true);
+        }
+
+        try {
+            const pagination: BookingPaginationParams = {
+                page,
+                size: 10
+            };
+
+            const bookingsData = await getUserBookings(pagination);
+            setTotalBookings(bookingsData.totalElements);
+
+            if (reset) {
+                setUserBookings(bookingsData.content);
+            } else {
+                setUserBookings(prev => [...prev, ...bookingsData.content]);
+            }
+
+            const hasMore = page < bookingsData.totalPages - 1;
+            setHasMoreBookings(hasMore);
+
+        } catch (error) {
+            Alert.alert('Błąd', 'Nie udało się załadować rezerwacji');
+        } finally {
+            if (reset) {
+                setLoading(false);
+            } else {
+                setLoadingMoreBookings(false);
+            }
+        }
+    }, [user?.id]);
+
     const loadData = useCallback(async () => {
         if (!user?.id) return;
         setLoading(true);
         try {
-            const [scheduleData, bookingsData] = await Promise.all([
+            const [scheduleData] = await Promise.all([
                 getCurrentWeekSchedule(),
-                getUserBookings(),
+                loadBookings(0, true)
             ]);
             setWeeklySchedule(scheduleData);
-            setUserBookings(bookingsData);
+            setCurrentBookingsPage(0);
         } catch (error) {
             Alert.alert('Błąd', 'Nie udało się załadować harmonogramu');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [user?.id]);
+    }, [user?.id, loadBookings]);
 
     useEffect(() => {
         loadData();
@@ -92,8 +132,17 @@ export default function ScheduleScreen() {
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
+        setCurrentBookingsPage(0);
         loadData();
     }, [loadData]);
+
+    const handleLoadMoreBookings = () => {
+        if (hasMoreBookings && !loadingMoreBookings) {
+            const nextPage = currentBookingsPage + 1;
+            setCurrentBookingsPage(nextPage);
+            loadBookings(nextPage, false);
+        }
+    };
 
     const handleClassPress = (classItem: Schedule) => {
         setSelectedClass(classItem);
@@ -110,6 +159,8 @@ export default function ScheduleScreen() {
             });
             Alert.alert('Sukces', 'Pomyślnie zapisano na zajęcia!');
             setModalVisible(false);
+            // Reload data to refresh bookings
+            setCurrentBookingsPage(0);
             loadData();
         } catch (error) {
             Alert.alert('Błąd', 'Nie udało się zapisać na zajęcia');
@@ -128,8 +179,9 @@ export default function ScheduleScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await cancelClassBooking(bookingId, user.id);
+                            await cancelClassBooking(bookingId);
                             Alert.alert('Sukces', 'Rezerwacja została anulowana');
+                            setCurrentBookingsPage(0);
                             loadData();
                         } catch (error) {
                             Alert.alert('Błąd', 'Nie udało się anulować rezerwacji');
@@ -227,8 +279,12 @@ export default function ScheduleScreen() {
                 ) : (
                     <BookingsTab
                         userBookings={userBookings}
+                        totalBookings={totalBookings}
                         isClassInPast={isClassInPast}
                         onCancelBooking={handleCancelBooking}
+                        hasMoreBookings={hasMoreBookings}
+                        loadingMoreBookings={loadingMoreBookings}
+                        onLoadMore={handleLoadMoreBookings}
                     />
                 )}
             </ScrollView>

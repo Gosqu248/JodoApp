@@ -59,3 +59,8 @@ export const formatDate = (date: Date) =>
         month: '2-digit',
         year: 'numeric'
     });
+
+export const formatTime = (timeString: string): string => {
+    const [hours, minutes] = timeString.split(':');
+    return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+};
