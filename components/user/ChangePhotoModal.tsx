@@ -14,6 +14,7 @@ import { updateUserPhoto } from '@/api/user';
 import {handleApiError} from "@/utils/errorHandler";
 import {useImagePicker} from "@/utils/useImagePicker";
 
+
 interface ChangePhotoModalProps {
     visible: boolean;
     onClose: () => void;
@@ -24,8 +25,12 @@ export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: C
     const [uploading, setUploading] = useState(false);
     const { selectedImage, showImagePicker, resetImage } = useImagePicker();
 
+    // Upload the selected photo to the server
     const uploadPhoto = async () => {
-        if (!selectedImage) return;
+        if (!selectedImage) {
+            Alert.alert('Błąd', 'Nie wybrano zdjęcia');
+            return;
+        }
 
         setUploading(true);
         try {
@@ -50,10 +55,21 @@ export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: C
         }
     };
 
-
+    // Reset state and close modal
     const handleClose = () => {
-        resetImage();
-        onClose();
+        if (!uploading) {
+            resetImage();
+            onClose();
+        }
+    };
+
+    // Handle image picker with error handling
+    const handleImagePicker = async () => {
+        try {
+            await showImagePicker();
+        } catch  {
+            Alert.alert('Błąd', 'Nie udało się wybrać zdjęcia');
+        }
     };
 
     return (
@@ -69,11 +85,11 @@ export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: C
                     <View style={styles.header}>
                         <Text style={styles.title}>Zmień zdjęcie profilowe</Text>
                         <TouchableOpacity
-                            style={styles.closeButton}
+                            style={[styles.closeButton, uploading && styles.disabledButton]}
                             onPress={handleClose}
                             disabled={uploading}
                         >
-                            <Ionicons name="close" size={24} color="#000" />
+                            <Ionicons name="close" size={24} color={uploading ? "#ccc" : "#000"} />
                         </TouchableOpacity>
                     </View>
 
@@ -96,12 +112,12 @@ export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: C
                     {/* Action Buttons */}
                     <View style={styles.actionContainer}>
                         <TouchableOpacity
-                            style={styles.actionButton}
-                            onPress={showImagePicker}
+                            style={[styles.actionButton, uploading && styles.disabledButton]}
+                            onPress={handleImagePicker}
                             disabled={uploading}
                         >
-                            <Ionicons name="camera" size={24} color="#000" />
-                            <Text style={styles.actionButtonText}>
+                            <Ionicons name="camera" size={24} color={uploading ? "#ccc" : "#000"} />
+                            <Text style={[styles.actionButtonText, uploading && styles.disabledText]}>
                                 {selectedImage ? 'Zmień zdjęcie' : 'Wybierz zdjęcie'}
                             </Text>
                         </TouchableOpacity>
@@ -110,19 +126,21 @@ export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: C
                             <Ionicons name="information-circle-outline" size={24} color="#000" />
                             <Text style={styles.infoText}>
                                 Zdjęcie profilowe można zmieniać tylko 1 raz w miesiącu.
+                                Upewnij się, że wybrane zdjęcie jest wyraźne i przedstawia Twoją twarz.
                             </Text>
                         </View>
-
                     </View>
 
                     {/* Bottom Buttons */}
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
-                            style={styles.cancelButton}
+                            style={[styles.cancelButton, uploading && styles.disabledButton]}
                             onPress={handleClose}
                             disabled={uploading}
                         >
-                            <Text style={styles.cancelButtonText}>Anuluj</Text>
+                            <Text style={[styles.cancelButtonText, uploading && styles.disabledText]}>
+                                Anuluj
+                            </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -136,7 +154,12 @@ export default function ChangePhotoModal({ visible, onClose, onPhotoUpdated }: C
                             {uploading ? (
                                 <ActivityIndicator color="#000" size="small" />
                             ) : (
-                                <Text style={styles.submitButtonText}>Zapisz</Text>
+                                <Text style={[
+                                    styles.submitButtonText,
+                                    !selectedImage && styles.disabledText
+                                ]}>
+                                    Zapisz
+                                </Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -181,6 +204,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#f5f5f5',
         borderRadius: 20,
     },
+    disabledButton: {
+        opacity: 0.5,
+    },
     imagePreviewContainer: {
         alignItems: 'center',
         marginBottom: 24,
@@ -224,18 +250,14 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#e0e0e0',
     },
-    removeButton: {
-        backgroundColor: '#fef2f2',
-        borderColor: '#fecaca',
-    },
     actionButtonText: {
         fontSize: 16,
         fontWeight: '600',
         color: '#000',
         marginLeft: 8,
     },
-    removeButtonText: {
-        color: '#F44336',
+    disabledText: {
+        color: '#ccc',
     },
     infoContainer: {
         flexDirection: 'row',
@@ -243,12 +265,13 @@ const styles = StyleSheet.create({
         padding: 22,
         gap: 10,
         marginVertical: 12,
+        borderRadius: 12,
     },
     infoText: {
-        width: '80%',
-        textAlign: 'center',
+        flex: 1,
         fontSize: 13,
         color: '#888',
+        lineHeight: 18,
     },
     buttonContainer: {
         flexDirection: 'row',
@@ -279,6 +302,7 @@ const styles = StyleSheet.create({
     },
     submitButtonDisabled: {
         opacity: 0.6,
+        backgroundColor: '#ffe680',
     },
     submitButtonText: {
         fontSize: 16,

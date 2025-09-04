@@ -34,8 +34,10 @@ export default function ActivityScreen() {
 
     const { currentActivity, isInGym } = useLocationTracking(user?.id || null);
 
+    // Track elapsed time for current activity
     const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
+    // Update elapsed time every minute for active sessions
     useEffect(() => {
         let interval: number;
         if (currentActivity) {
@@ -53,27 +55,7 @@ export default function ActivityScreen() {
         };
     }, [currentActivity]);
 
-    useFocusEffect(
-        useCallback(() => {
-            if (user?.id) {
-                fetchOnGymCount();
-                setCurrentPage(0);
-                fetchStats(0, true);
-            }
-        }, [selectedStats, user?.id])
-    );
-
-    useEffect(() => {
-        if (user?.id && !currentActivity) {
-            const timer = setTimeout(() => {
-                fetchOnGymCount();
-                setCurrentPage(0);
-                fetchStats(0, true);
-            }, 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [currentActivity, user?.id]);
-
+    // Fetch statistics with pagination support
     const fetchStats = useCallback(async (page: number = 0, reset: boolean = false) => {
         if (!user?.id) return;
 
@@ -91,6 +73,7 @@ export default function ActivityScreen() {
 
             let stats: ActivityStatus;
 
+            // Fetch different stats based on selected period
             if (selectedStats === 'total') {
                 stats = await getTotalActivity(user.id, pagination);
             } else if (selectedStats === 'weekly') {
@@ -101,6 +84,7 @@ export default function ActivityScreen() {
                 stats = await getMonthlyStats(user.id, monthStart, pagination);
             }
 
+            // Update state with new or concatenated data
             if (reset) {
                 setActivityStatus(stats);
             } else {
@@ -119,7 +103,7 @@ export default function ActivityScreen() {
             const hasMore = page < stats.activities.totalPages - 1;
             setHasMorePages(hasMore);
 
-        } catch (error) {
+        } catch {
             Alert.alert('Błąd', 'Nie udało się pobrać statystyk aktywności');
         } finally {
             setLoading(false);
@@ -127,15 +111,40 @@ export default function ActivityScreen() {
         }
     }, [user?.id, selectedStats]);
 
+    // Refresh data when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            if (user?.id) {
+                fetchOnGymCount();
+                setCurrentPage(0);
+                fetchStats(0, true);
+            }
+        }, [fetchStats, user?.id])
+    );
+
+    // Auto-refresh after activity ends (with debounce)
+    useEffect(() => {
+        if (user?.id && !currentActivity) {
+            const timer = setTimeout(() => {
+                fetchOnGymCount();
+                setCurrentPage(0);
+                fetchStats(0, true);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [currentActivity, user?.id, fetchStats]);
+
+    // Fetch current gym occupancy count
     const fetchOnGymCount = async () => {
         try {
             const count = await getUsersOnGym();
             setOnGymCount(count);
-        } catch (error) {
+        } catch {
             Alert.alert('Błąd', 'Błąd przy pobieraniu liczby osób na siłowni');
         }
     };
 
+    // Handle pull-to-refresh
     const handleRefresh = async () => {
         setRefreshing(true);
         setCurrentPage(0);
@@ -144,6 +153,7 @@ export default function ActivityScreen() {
         setRefreshing(false);
     };
 
+    // Load more activities for pagination
     const handleLoadMore = () => {
         if (hasMorePages && !loadingMore) {
             const nextPage = currentPage + 1;
@@ -152,6 +162,7 @@ export default function ActivityScreen() {
         }
     };
 
+    // Utility functions for date calculations
     const getWeekStart = (date: Date) => {
         const d = new Date(date);
         const day = d.getDay();
@@ -162,12 +173,14 @@ export default function ActivityScreen() {
     const getMonthStart = (date: Date) =>
         new Date(date.getFullYear(), date.getMonth(), 1);
 
+    // Get display title for selected stats period
     const getStatsTitle = () => {
         if (selectedStats === 'total') return 'Łączna aktywność';
         if (selectedStats === 'weekly') return 'Ten tydzień';
         return 'Ten miesiąc';
     };
 
+    // Get activity status information for current session
     const getActivityStatusInfo = () => {
         if (!currentActivity) return null;
 
@@ -183,6 +196,7 @@ export default function ActivityScreen() {
         }
     };
 
+    // Show loading spinner while initial data is loading
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
@@ -206,6 +220,7 @@ export default function ActivityScreen() {
                     />
                 }
             >
+                {/* Current gym occupancy display */}
                 <View style={styles.activityButton}>
                     <Ionicons name="fitness-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Ilość osób na siłowni: {onGymCount}</Text>
@@ -215,7 +230,7 @@ export default function ActivityScreen() {
                     <Text style={styles.title}>Moja aktywność</Text>
                 </View>
 
-                {/* Show current activity card only when active */}
+                {/* Current activity card - only shown when user has active session */}
                 {currentActivity && statusInfo && (
                     <View style={[
                         styles.currentActivityCard,
@@ -258,6 +273,7 @@ export default function ActivityScreen() {
                     </View>
                 )}
 
+                {/* Period selector tabs */}
                 <View style={styles.periodSelector}>
                     {(['weekly', 'monthly', 'total'] as StatsType[]).map((period) => (
                         <TouchableOpacity
@@ -284,11 +300,13 @@ export default function ActivityScreen() {
                     ))}
                 </View>
 
+                {/* Statistics section */}
                 <View style={styles.statsSection}>
                     <Text style={styles.sectionTitle}>{getStatsTitle()}</Text>
 
                     {activityStatus ? (
                         <>
+                            {/* Summary statistics cards */}
                             <View style={styles.statsGrid}>
                                 <View style={styles.statCard}>
                                     <Ionicons name="time-outline" size={32} color="#ffc500" />
@@ -311,6 +329,7 @@ export default function ActivityScreen() {
                                 </View>
                             </View>
 
+                            {/* Activity history list */}
                             {activityStatus.activities.content.length > 0 && (
                                 <View style={styles.activitiesSection}>
                                     <Text style={styles.sectionTitle}>
@@ -359,7 +378,7 @@ export default function ActivityScreen() {
                                         </View>
                                     ))}
 
-                                    {/* Load More Button */}
+                                    {/* Pagination - Load more button */}
                                     {hasMorePages && (
                                         <TouchableOpacity
                                             style={styles.loadMoreButton}
@@ -380,6 +399,7 @@ export default function ActivityScreen() {
                             )}
                         </>
                     ) : (
+                        // No data state
                         <View style={styles.noDataContainer}>
                             <Ionicons
                                 name="fitness-outline"

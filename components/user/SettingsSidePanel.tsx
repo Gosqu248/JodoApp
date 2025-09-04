@@ -6,7 +6,8 @@ import {
     StyleSheet,
     Dimensions,
 } from 'react-native';
-import Animated, {
+import Animated,
+{
     useSharedValue,
     useAnimatedStyle,
     withTiming,
@@ -35,6 +36,7 @@ export default function SettingsSlidePanel({
     const translateX = useSharedValue(PANEL_WIDTH);
     const backdropOpacity = useSharedValue(0);
 
+    // Animate panel entrance/exit based on visibility
     useEffect(() => {
         if (visible) {
             translateX.value = withTiming(0, { duration: 350 });
@@ -43,21 +45,25 @@ export default function SettingsSlidePanel({
             translateX.value = withTiming(PANEL_WIDTH, { duration: 300 });
             backdropOpacity.value = withTiming(0, { duration: 300 });
         }
-    }, [visible]);
+    }, [visible, translateX, backdropOpacity]);
 
+    // Pan gesture handler for swipe-to-close functionality
     const panGesture = Gesture.Pan()
         .onUpdate((event) => {
+            // Only allow right swipe (positive translation)
             if (event.translationX > 0) {
                 translateX.value = event.translationX;
             }
         })
         .onEnd((event) => {
+            // Close panel if swiped far enough or with sufficient velocity
             const shouldClose = event.translationX > PANEL_WIDTH * 0.3 || event.velocityX > 500;
             if (shouldClose) {
                 translateX.value = withTiming(PANEL_WIDTH, { duration: 300 });
                 backdropOpacity.value = withTiming(0, { duration: 300 });
                 runOnJS(onClose)();
             } else {
+                // Snap back to open position
                 translateX.value = withSpring(0, {
                     damping: 15,
                     stiffness: 150,
@@ -65,25 +71,28 @@ export default function SettingsSlidePanel({
             }
         });
 
+    // Animated styles for panel position
     const panelAnimatedStyle = useAnimatedStyle(() => {
         return {
             transform: [{ translateX: translateX.value }],
         };
     });
 
+    // Animated styles for backdrop opacity
     const backdropAnimatedStyle = useAnimatedStyle(() => {
         return {
             opacity: backdropOpacity.value,
         };
     });
 
+    // Don't render anything when not visible
     if (!visible) {
         return null;
     }
 
     return (
         <View style={StyleSheet.absoluteFill}>
-            {/* Backdrop z możliwością zamknięcia */}
+            {/* Semi-transparent backdrop with tap-to-close */}
             <Animated.View
                 style={[
                     styles.backdrop,
@@ -97,7 +106,7 @@ export default function SettingsSlidePanel({
                 />
             </Animated.View>
 
-            {/* Panel ustawień */}
+            {/* Settings panel with gesture handling */}
             <GestureDetector gesture={panGesture}>
                 <Animated.View
                     style={[
@@ -105,10 +114,10 @@ export default function SettingsSlidePanel({
                         panelAnimatedStyle
                     ]}
                 >
-                    {/* Wskaźnik przeciągania */}
+                    {/* Visual drag indicator */}
                     <View style={styles.dragIndicator} />
 
-                    {/* Nagłówek */}
+                    {/* Panel header */}
                     <View style={styles.header}>
                         <Text style={styles.title}>Ustawienia</Text>
                         <TouchableOpacity
@@ -120,8 +129,9 @@ export default function SettingsSlidePanel({
                         </TouchableOpacity>
                     </View>
 
-                    {/* Opcje menu */}
+                    {/* Settings menu options */}
                     <View style={styles.menuContainer}>
+                        {/* Change Password Option */}
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={onChangePassword}
@@ -141,6 +151,7 @@ export default function SettingsSlidePanel({
 
                         <View style={styles.divider} />
 
+                        {/* Change Photo Option */}
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={onChangePhoto}
@@ -159,7 +170,7 @@ export default function SettingsSlidePanel({
                         </TouchableOpacity>
                     </View>
 
-                    {/* Footer z informacjami */}
+                    {/* Instructional footer */}
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>
                             Przeciągnij w prawo lub dotknij poza panelem aby zamknąć

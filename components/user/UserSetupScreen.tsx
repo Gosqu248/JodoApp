@@ -32,6 +32,55 @@ export default function UserSetupScreen() {
     const [birthDate, setBirthDate] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
 
+    // Phone number formatting and validation
+    const formatPhoneNumber = (text: string) => {
+        // Remove all non-digits and limit to 9 digits (Polish mobile number)
+        const cleaned = text.replace(/\D/g, '');
+        return cleaned.slice(0, 9);
+    };
+
+    // Validate form fields
+    const validateForm = () => {
+        const errors: string[] = [];
+
+        if (!firstName.trim()) {
+            errors.push('Imię jest wymagane');
+        } else if (firstName.trim().length < 2) {
+            errors.push('Imię musi mieć co najmniej 2 znaki');
+        }
+
+        if (!lastName.trim()) {
+            errors.push('Nazwisko jest wymagane');
+        } else if (lastName.trim().length < 2) {
+            errors.push('Nazwisko musi mieć co najmniej 2 znaki');
+        }
+
+        if (!phoneNumber.trim()) {
+            errors.push('Numer telefonu jest wymagany');
+        } else if (phoneNumber.length !== 9) {
+            errors.push('Numer telefonu musi mieć 9 cyfr');
+        }
+
+        if (!selectedImage) {
+            errors.push('Zdjęcie profilowe jest wymagane');
+        }
+
+        // Check if birth date is not in the future
+        const today = new Date();
+        if (birthDate > today) {
+            errors.push('Data urodzenia nie może być w przyszłości');
+        }
+
+        // Check if user is at least 13 years old
+        const minAge = new Date();
+        minAge.setFullYear(minAge.getFullYear() - 13);
+        if (birthDate > minAge) {
+            errors.push('Musisz mieć co najmniej 13 lat');
+        }
+
+        return errors;
+    };
+
     const handleDateChange = (event: any, selectedDate?: Date) => {
         const currentDate = selectedDate || birthDate;
         setShowDatePicker(Platform.OS === 'ios');
@@ -39,33 +88,39 @@ export default function UserSetupScreen() {
     };
 
     const handleSubmit = async () => {
-        if (!firstName.trim() || !lastName.trim()) {
-            Alert.alert('Błąd', 'Proszę wypełnić wszystkie wymagane pola');
+        const validationErrors = validateForm();
+
+        if (validationErrors.length > 0) {
+            Alert.alert('Błąd walidacji', validationErrors.join('\n'));
             return;
         }
 
-        if (!selectedImage) {
-            Alert.alert('Błąd', 'Proszę dodać zdjęcie profilowe');
-            return;
+        try {
+            await updateUserInfo({
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                phoneNumber: phoneNumber.trim(),
+                birthDate: birthDate.toISOString(),
+                profileImageUri: selectedImage!,
+            });
+        } catch (error) {
+            Alert.alert('Błąd', 'Nie udało się zapisać danych. Spróbuj ponownie.');
         }
-
-        await updateUserInfo({
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            phoneNumber: phoneNumber.trim(),
-            birthDate: birthDate.toISOString(),
-            profileImageUri: selectedImage!,
-        });
     };
 
     const handleLogout = async () => {
         try {
             await logout();
             router.push('/(tabs)');
-        } catch (e) {
+        } catch (error) {
             Alert.alert('Błąd', 'Nie udało się wylogować.');
         }
-    }
+    };
+
+    const handlePhoneNumberChange = (text: string) => {
+        const formatted = formatPhoneNumber(text);
+        setPhoneNumber(formatted);
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -74,6 +129,7 @@ export default function UserSetupScreen() {
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
             >
                 {/* Header */}
                 <View style={styles.header}>
@@ -95,6 +151,7 @@ export default function UserSetupScreen() {
                                 value={firstName}
                                 onChangeText={setFirstName}
                                 autoCapitalize="words"
+                                maxLength={50}
                             />
                         </View>
 
@@ -106,6 +163,7 @@ export default function UserSetupScreen() {
                                 value={lastName}
                                 onChangeText={setLastName}
                                 autoCapitalize="words"
+                                maxLength={50}
                             />
                         </View>
 
@@ -113,11 +171,15 @@ export default function UserSetupScreen() {
                             <Text style={styles.inputLabel}>Numer Telefonu *</Text>
                             <TextInput
                                 style={styles.textInput}
-                                placeholder="Wprowadź swój numer telefonu"
+                                placeholder="123456789"
                                 value={phoneNumber}
-                                onChangeText={setPhoneNumber}
-                                autoCapitalize="words"
+                                onChangeText={handlePhoneNumberChange}
+                                keyboardType="numeric"
+                                maxLength={9}
                             />
+                            <Text style={styles.helperText}>
+                                Podaj 9 cyfr numeru telefonu (bez kierunkowego)
+                            </Text>
                         </View>
 
                         <View style={styles.inputContainer}>
@@ -276,6 +338,12 @@ const styles = StyleSheet.create({
         padding: 16,
         fontSize: 16,
         backgroundColor: '#f9f9f9'
+    },
+    helperText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
+        marginLeft: 4
     },
     dateButton: {
         flexDirection: 'row',
