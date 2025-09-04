@@ -29,13 +29,13 @@ export function useImagePicker() {
                 mediaTypes: ['images'],
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.8,
+                quality: 0.5,
             });
 
             if (!result.canceled && result.assets[0]) {
                 await processImage(result.assets[0].uri);
             }
-        } catch (error) {
+        } catch {
             Alert.alert('Błąd', 'Nie udało się zrobić zdjęcia');
         }
     };
@@ -46,13 +46,13 @@ export function useImagePicker() {
                 mediaTypes: ['images'],
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.8,
+                quality: 0.5,
             });
 
             if (!result.canceled && result.assets[0]) {
                 await processImage(result.assets[0].uri);
             }
-        } catch (error) {
+        } catch {
             Alert.alert('Błąd', 'Nie udało się wybrać zdjęcia');
         }
     };
@@ -60,7 +60,7 @@ export function useImagePicker() {
     const processImage = async (uri: string) => {
         try {
             setSelectedImage(uri);
-        } catch (error) {
+        } catch {
             Alert.alert('Błąd', 'Nie udało się przetworzyć zdjęcia');
         }
     };

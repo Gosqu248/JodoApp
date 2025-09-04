@@ -3,7 +3,7 @@ import {
     View,
     Text,
     TouchableOpacity,
-    StyleSheet,
+    StyleSheet, ColorValue,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,31 +14,54 @@ interface TypeItemProps {
     membershipType: MembershipType;
 }
 
+/**
+ * TypeItem Component
+ *
+ * Displays a single membership type option with adaptive styling based on membership features.
+ * Features visual distinction between one-time entries, gym-only, and full access memberships.
+ *
+ * Key Features:
+ * - Adaptive icons and colors based on membership type
+ * - Limited offer highlighting for special promotions
+ * - Feature list showing included benefits
+ * - Price display with proper formatting
+ * - Touch-enabled for future selection functionality
+ *
+ * @param membershipType - The membership type data to display
+ */
 export default function TypeItem({ membershipType }: TypeItemProps) {
 
+    /**
+     * Determines appropriate icon based on membership type and features
+     * @returns Ionicons icon name
+     */
     const getTypeIcon = (): keyof typeof Ionicons.glyphMap => {
         const isOneTime = (!membershipType.durationMonths || membershipType.durationMonths === 0) &&
             (!membershipType.durationWeeks || membershipType.durationWeeks === 0);
 
         if (isOneTime) {
-            return 'enter';
+            return 'enter'; // One-time entry icon
         } else if (membershipType.withExercises) {
-            return 'trophy';
+            return 'trophy'; // Premium membership with exercises icon
         } else {
-            return 'fitness';
+            return 'fitness'; // Standard gym-only membership icon
         }
     };
 
-    const getGradientColors = (): string[] => {
+    /**
+     * Returns gradient colors based on membership type for visual distinction
+     * @returns Array of gradient color strings
+     */
+    const getGradientColors = (): readonly [ColorValue, ColorValue] => {
         const isOneTime = (!membershipType.durationMonths || membershipType.durationMonths === 0) &&
             (!membershipType.durationWeeks || membershipType.durationWeeks === 0);
 
         if (isOneTime) {
-            return ['#4CAF50', '#45a049']; // Green for one-time
+            return ['#4CAF50', '#45a049'] as const; // Green for one-time entries
         } else if (membershipType.withExercises) {
-            return ['#ffd500', '#ff9000']; // Gold for OPEN
+            return ['#ffd500', '#ff9000'] as const; // Gold for premium OPEN memberships
         } else {
-            return ['#2196F3', '#1976D2']; // Blue for gym-only
+            return ['#2196F3', '#1976D2'] as const; // Blue for gym-only memberships
         }
     };
 
@@ -48,16 +71,19 @@ export default function TypeItem({ membershipType }: TypeItemProps) {
             activeOpacity={0.8}
         >
             <View style={styles.card}>
-                {/* Header with icon and price */}
+                {/* Limited offer banner - only shown for special promotions */}
                 { membershipType.isLimited && (
                     <View style={styles.limitedContainer}>
                         <Text style={styles.limitedText}>Oferta limitowana</Text>
                     </View>
                 )}
+
+                {/* Main card content with gradient background */}
                 <LinearGradient
                     colors={['#ffffff', '#f8f9fa']}
                     style={styles.cardGradient}
                 >
+                    {/* Header section with icon and price */}
                     <View style={styles.header}>
                         <View style={styles.iconContainer}>
                             <LinearGradient
@@ -78,13 +104,14 @@ export default function TypeItem({ membershipType }: TypeItemProps) {
                         </View>
                     </View>
 
-                    {/* Content */}
+                    {/* Content section with name, duration, and features */}
                     <View style={styles.content}>
                         <Text style={styles.name}>{membershipType.name}</Text>
                         <Text style={styles.duration}>
                             {formatDuration(membershipType)}
                         </Text>
 
+                        {/* Show group exercises feature for premium memberships */}
                         {membershipType.withExercises && (
                             <View style={styles.featureContainer}>
                                 <View style={styles.feature}>
@@ -94,6 +121,7 @@ export default function TypeItem({ membershipType }: TypeItemProps) {
                             </View>
                         )}
 
+                        {/* Basic gym access - included in all memberships */}
                         <View style={styles.featureContainer}>
                             <View style={styles.feature}>
                                 <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />

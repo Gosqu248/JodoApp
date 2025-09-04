@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -8,12 +8,13 @@ import {
     ActivityIndicator,
     Alert,
     RefreshControl,
-    TouchableOpacity, Platform
+    TouchableOpacity,
+    Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ActivityStatus } from '@/types/ActivityStatus';
-import { getWeeklyStats, getMonthlyStats, getTotalActivity, getUsersOnGym} from '@/api/activity';
+import { getWeeklyStats, getMonthlyStats, getTotalActivity, getUsersOnGym, PaginationParams} from '@/api/activity';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
 import { formatActivityDuration } from '@/utils/formatters';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,11 +28,19 @@ export default function ActivityScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [onGymCount, setOnGymCount] = useState<number>(0);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [hasMorePages, setHasMorePages] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
 
     const { currentActivity, isInGym } = useLocationTracking(user?.id || null);
 
+    // Ref to track previous activity state to prevent unnecessary refreshes
+    const previousActivityRef = useRef(currentActivity);
+
+    // Track elapsed time for current activity
     const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
+    // Update elapsed time every minute for active sessions
     useEffect(() => {
         let interval: number;
         if (currentActivity) {
@@ -49,65 +58,139 @@ export default function ActivityScreen() {
         };
     }, [currentActivity]);
 
+    // Fetch statistics with pagination support
+    const fetchStats = useCallback(async (page: number = 0, reset: boolean = false) => {
+        if (!user?.id) return;
+
+        if (reset) {
+            setLoading(true);
+        } else {
+            setLoadingMore(true);
+        }
+
+        try {
+            const pagination: PaginationParams = {
+                page,
+                size: 10
+            };
+
+            let stats: ActivityStatus;
+
+            // Fetch different stats based on selected period
+            if (selectedStats === 'total') {
+                stats = await getTotalActivity(user.id, pagination);
+            } else if (selectedStats === 'weekly') {
+                const weekStart = getWeekStart(new Date()).toISOString().split('T')[0];
+                stats = await getWeeklyStats(user.id, weekStart, pagination);
+            } else {
+                const monthStart = getMonthStart(new Date()).toISOString().split('T')[0];
+                stats = await getMonthlyStats(user.id, monthStart, pagination);
+            }
+
+            // Update state with new or concatenated data
+            if (reset) {
+                setActivityStatus(stats);
+            } else {
+                setActivityStatus(prev => {
+                    if (!prev) return stats;
+                    return {
+                        ...stats,
+                        activities: {
+                            ...stats.activities,
+                            content: [...prev.activities.content, ...stats.activities.content]
+                        }
+                    };
+                });
+            }
+
+            const hasMore = page < stats.activities.totalPages - 1;
+            setHasMorePages(hasMore);
+
+        } catch {
+            Alert.alert('Błąd', 'Nie udało się pobrać statystyk aktywności');
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+        }
+    }, [user?.id, selectedStats]);
+
+    // Refresh data when screen comes into focus
     useFocusEffect(
         useCallback(() => {
             if (user?.id) {
                 fetchOnGymCount();
-                fetchStats();
+                setCurrentPage(0);
+                fetchStats(0, true);
             }
-        }, [selectedStats, user?.id])
+        }, [fetchStats, user?.id])
     );
 
+    // Handle selectedStats change - reset page and fetch new data
     useEffect(() => {
-        if (user?.id && !currentActivity) {
+        if (user?.id) {
+            setCurrentPage(0);
+            fetchStats(0, true);
+        }
+    }, [selectedStats, user?.id]); // Removed fetchStats from dependencies to prevent infinite loop
+
+    // Auto-refresh after activity ends (with debounce) - only when activity actually changes
+    useEffect(() => {
+        const previousActivity = previousActivityRef.current;
+
+        // Only refresh if activity actually ended (was active, now inactive)
+        if (user?.id && previousActivity && !currentActivity) {
             const timer = setTimeout(() => {
                 fetchOnGymCount();
-                fetchStats();
+                setCurrentPage(0);
+                fetchStats(0, true);
             }, 1000);
+
+            // Update ref after setting timer
+            previousActivityRef.current = currentActivity;
+
             return () => clearTimeout(timer);
         }
+
+        // Always update the ref
+        previousActivityRef.current = currentActivity;
     }, [currentActivity, user?.id]);
 
-    const fetchStats = useCallback(async () => {
-        if (!user?.id) return;
-        setLoading(true);
-        try {
-            let stats: ActivityStatus;
-
-            if (selectedStats === 'total') {
-                stats = await getTotalActivity(user.id);
-            } else if (selectedStats === 'weekly') {
-                const weekStart = getWeekStart(new Date()).toISOString().split('T')[0];
-                stats = await getWeeklyStats(user.id, weekStart);
-            } else {
-                const monthStart = getMonthStart(new Date()).toISOString().split('T')[0];
-                stats = await getMonthlyStats(user.id, monthStart);
-            }
-
-            setActivityStatus(stats);
-        } catch (error) {
-            Alert.alert('Błąd', 'Nie udało się pobrać statystyk aktywności');
-        } finally {
-            setLoading(false);
-        }
-    }, [user?.id, selectedStats]);
-
+    // Fetch current gym occupancy count
     const fetchOnGymCount = async () => {
         try {
             const count = await getUsersOnGym();
             setOnGymCount(count);
-        } catch (error) {
+        } catch {
             Alert.alert('Błąd', 'Błąd przy pobieraniu liczby osób na siłowni');
         }
-    }
+    };
 
+    // Handle pull-to-refresh
     const handleRefresh = async () => {
         setRefreshing(true);
-        await fetchStats();
+        setCurrentPage(0);
+        await fetchStats(0, true);
         await fetchOnGymCount();
         setRefreshing(false);
     };
 
+    // Load more activities for pagination
+    const handleLoadMore = () => {
+        if (hasMorePages && !loadingMore) {
+            const nextPage = currentPage + 1;
+            setCurrentPage(nextPage);
+            fetchStats(nextPage, false);
+        }
+    };
+
+    // Handle stats type selection
+    const handleStatsTypeChange = (statsType: StatsType) => {
+        setSelectedStats(statsType);
+        // Reset page when changing stats type - fetchStats will be called by useEffect
+        setCurrentPage(0);
+    };
+
+    // Utility functions for date calculations
     const getWeekStart = (date: Date) => {
         const d = new Date(date);
         const day = d.getDay();
@@ -118,12 +201,14 @@ export default function ActivityScreen() {
     const getMonthStart = (date: Date) =>
         new Date(date.getFullYear(), date.getMonth(), 1);
 
+    // Get display title for selected stats period
     const getStatsTitle = () => {
         if (selectedStats === 'total') return 'Łączna aktywność';
         if (selectedStats === 'weekly') return 'Ten tydzień';
         return 'Ten miesiąc';
     };
 
+    // Get activity status information for current session
     const getActivityStatusInfo = () => {
         if (!currentActivity) return null;
 
@@ -139,6 +224,7 @@ export default function ActivityScreen() {
         }
     };
 
+    // Show loading spinner while initial data is loading
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
@@ -162,10 +248,8 @@ export default function ActivityScreen() {
                     />
                 }
             >
-
-                <View
-                    style={styles.activityButton}
-                >
+                {/* Current gym occupancy display */}
+                <View style={styles.activityButton}>
                     <Ionicons name="fitness-outline" size={24} color="#000" />
                     <Text style={styles.activityButtonText}>Ilość osób na siłowni: {onGymCount}</Text>
                 </View>
@@ -174,7 +258,7 @@ export default function ActivityScreen() {
                     <Text style={styles.title}>Moja aktywność</Text>
                 </View>
 
-                {/* Pokaż kartę aktualnej aktywności tylko gdy jest aktywna */}
+                {/* Current activity card - only shown when user has active session */}
                 {currentActivity && statusInfo && (
                     <View style={[
                         styles.currentActivityCard,
@@ -217,6 +301,7 @@ export default function ActivityScreen() {
                     </View>
                 )}
 
+                {/* Period selector tabs */}
                 <View style={styles.periodSelector}>
                     {(['weekly', 'monthly', 'total'] as StatsType[]).map((period) => (
                         <TouchableOpacity
@@ -225,7 +310,7 @@ export default function ActivityScreen() {
                                 styles.periodButton,
                                 selectedStats === period && styles.periodButtonActive
                             ]}
-                            onPress={() => setSelectedStats(period)}
+                            onPress={() => handleStatsTypeChange(period)}
                         >
                             <Text
                                 style={[
@@ -243,11 +328,13 @@ export default function ActivityScreen() {
                     ))}
                 </View>
 
+                {/* Statistics section */}
                 <View style={styles.statsSection}>
                     <Text style={styles.sectionTitle}>{getStatsTitle()}</Text>
 
                     {activityStatus ? (
                         <>
+                            {/* Summary statistics cards */}
                             <View style={styles.statsGrid}>
                                 <View style={styles.statCard}>
                                     <Ionicons name="time-outline" size={32} color="#ffc500" />
@@ -264,18 +351,19 @@ export default function ActivityScreen() {
                                         color="#4CAF50"
                                     />
                                     <Text style={styles.statValue}>
-                                        {activityStatus.sessionsCount}
+                                        {activityStatus.activities.totalElements}
                                     </Text>
                                     <Text style={styles.statLabel}>Sesje</Text>
                                 </View>
                             </View>
 
-                            {activityStatus.activities.length > 0 && (
+                            {/* Activity history list */}
+                            {activityStatus.activities.content.length > 0 && (
                                 <View style={styles.activitiesSection}>
                                     <Text style={styles.sectionTitle}>
                                         Historia aktywności
                                     </Text>
-                                    {activityStatus.activities.map((activity) => (
+                                    {activityStatus.activities.content.map((activity) => (
                                         <View
                                             key={activity.id}
                                             style={styles.activityItem}
@@ -317,10 +405,29 @@ export default function ActivityScreen() {
                                             </View>
                                         </View>
                                     ))}
+
+                                    {/* Pagination - Load more button */}
+                                    {hasMorePages && (
+                                        <TouchableOpacity
+                                            style={styles.loadMoreButton}
+                                            onPress={handleLoadMore}
+                                            disabled={loadingMore}
+                                        >
+                                            {loadingMore ? (
+                                                <ActivityIndicator size="small" color="#ffc500" />
+                                            ) : (
+                                                <>
+                                                    <Ionicons name="chevron-down" size={20} color="#ffc500" />
+                                                    <Text style={styles.loadMoreText}>Załaduj więcej</Text>
+                                                </>
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             )}
                         </>
                     ) : (
+                        // No data state
                         <View style={styles.noDataContainer}>
                             <Ionicons
                                 name="fitness-outline"
@@ -340,6 +447,7 @@ export default function ActivityScreen() {
         </SafeAreaView>
     );
 }
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', paddingBottom: Platform.OS === 'android' ? 25 : 0},
     scrollContainer: { padding: 20, paddingBottom: 80 },
@@ -477,6 +585,29 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#ffc500'
+    },
+
+    loadMoreButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 10,
+        borderWidth: 2,
+        borderColor: '#ffc500',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3
+    },
+    loadMoreText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#ffc500',
+        marginLeft: 8
     },
 
     noDataContainer: { alignItems: 'center', paddingVertical: 40 },

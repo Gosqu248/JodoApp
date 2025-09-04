@@ -1,10 +1,18 @@
+/**
+ * ResetPasswordScreen Component
+ *
+ * Password reset screen for the Jodo application.
+ * Handles three-step process: email sending, code verification and new password setting.
+ *
+ * @param {ResetPasswordScreenProps} props - Component properties
+ * @returns {JSX.Element} Password reset screen
+ */
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert, StatusBar, KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
 import React, { useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import {ResetCodeParams, resetPassword, ResetPasswordParams, sendResetPasswordEmail, verifyResetCode} from "@/api/auth";
-import {ErrorResponse} from "@/types/ErrorResponse";
 import {handleApiError} from "@/utils/errorHandler";
 
 interface ResetPasswordScreenProps {
@@ -12,25 +20,40 @@ interface ResetPasswordScreenProps {
 }
 
 export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScreenProps) {
+    // Reset form state
     const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [resetSent, setResetSent] = useState(false);
     const [code, setCode] = useState('');
-    const [isValidCode, setIsValidCode] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+    // States controlling password reset flow
+    const [isLoading, setIsLoading] = useState(false);
+    const [resetSent, setResetSent] = useState(false); // Whether email was sent
+    const [isValidCode, setIsValidCode] = useState(false); // Whether code was verified
+
+    // Validation errors state
     const [errors, setErrors] = useState<{
         code?: string;
         newPassword?: string;
         confirmNewPassword?: string;
     }>({});
 
-    const validateEmail = (email: string) => {
+    /**
+     * Validates email format
+     * @param {string} email - Email address to validate
+     * @returns {boolean} True if email is valid
+     */
+    const validateEmail = (email: string): boolean => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
     };
 
+    /**
+     * Handles sending email with password reset code
+     * First step of reset process
+     */
     const handleResetPassword = async () => {
+        // Email validation
         if (!email.trim()) {
             Alert.alert('Błąd', 'Proszę podać adres email');
             return;
@@ -52,6 +75,10 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
         }
     };
 
+    /**
+     * Handles verification of code received in email
+     * Second step of reset process
+     */
     const handleVerifyCode = async () => {
         setIsLoading(true);
         try {
@@ -67,6 +94,10 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
         }
     };
 
+    /**
+     * Handles final password reset
+     * Third step of reset process
+     */
     const handleResetPasswordFinal = async () => {
         if (!validateForm()) return;
 
@@ -85,12 +116,17 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
         }
     };
 
-    const validateForm = () => {
+    /**
+     * Validates new password form
+     * @returns {boolean} True if form is valid
+     */
+    const validateForm = (): boolean => {
         const newErrors: {
             newPassword?: string;
             confirmNewPassword?: string;
         } = {};
 
+        // New password validation
         if (!newPassword.trim()) {
             newErrors.newPassword = 'Nowe hasło jest wymagane';
         } else if (newPassword.length < 6) {
@@ -99,6 +135,7 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
             newErrors.newPassword = 'Hasło musi zawierać małą literę, dużą literę i cyfrę';
         }
 
+        // Password confirmation validation
         if (!confirmNewPassword.trim()) {
             newErrors.confirmNewPassword = 'Potwierdzenie hasła jest wymagane';
         } else if (newPassword !== confirmNewPassword) {
@@ -109,6 +146,11 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
         return Object.keys(newErrors).length === 0;
     };
 
+    /**
+     * Updates form field and clears corresponding error
+     * @param {string} field - Field name to update
+     * @param {string} value - New field value
+     */
     const updateField = (field: 'code' | 'newPassword' | 'confirmNewPassword', value: string) => {
         switch (field) {
             case 'code':
@@ -122,6 +164,7 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                 break;
         }
 
+        // Clear error for the field
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: undefined }));
         }
@@ -134,6 +177,8 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
             style={styles.container}
         >
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+
+            {/* Header with back button */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={onBackToLogin}>
                     <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -151,8 +196,10 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.contentContainer}>
+                        {/* App logo */}
                         <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
 
+                        {/* Step 1: Email input */}
                         {!resetSent && !isValidCode ? (
                             <>
                                 <Text style={styles.title}>Zapomniałeś hasła?</Text>
@@ -187,6 +234,7 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                                 </View>
                             </>
                         ) : resetSent && !isValidCode ? (
+                            /* Step 2: Code verification */
                             <>
                                 <Text style={styles.title}>Kod weryfikacyjny</Text>
                                 <Text style={styles.subtitle}>
@@ -219,13 +267,15 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                                 </View>
                             </>
                         ) : (
+                            /* Step 3: New password setting */
                             <>
-                                <Text style={styles.title}>Kod weryfikacyjny</Text>
+                                <Text style={styles.title}>Nowe hasło</Text>
                                 <Text style={styles.subtitle}>
-                                    Podaj swój kod weryfikacyjny, który został wysłany na Twój adres email.
+                                    Wprowadź swoje nowe hasło.
                                 </Text>
 
                                 <View style={styles.formContainer}>
+                                    {/* New password field */}
                                     <View style={styles.inputContainer}>
                                         <TextInput
                                             style={[styles.input, errors.newPassword && styles.inputError]}
@@ -241,6 +291,7 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                                         {errors.newPassword && <Text style={styles.errorText}>{errors.newPassword}</Text>}
                                     </View>
 
+                                    {/* Password confirmation field */}
                                     <View style={styles.inputContainer}>
                                         <TextInput
                                             style={[styles.input, errors.confirmNewPassword && styles.inputError]}
@@ -256,7 +307,7 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                                         {errors.confirmNewPassword && <Text style={styles.errorText}>{errors.confirmNewPassword}</Text>}
                                     </View>
 
-                                    {/* Sekcja wymagań hasła */}
+                                    {/* Password requirements section */}
                                     <View style={styles.passwordRequirements}>
                                         <Text style={styles.requirementsTitle}>Wymagania hasła:</Text>
                                         <Text style={styles.requirementText}>• Co najmniej 6 znaków</Text>
@@ -264,7 +315,6 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                                         <Text style={styles.requirementText}>• Zawiera dużą literę</Text>
                                         <Text style={styles.requirementText}>• Zawiera cyfrę</Text>
                                     </View>
-
 
                                     <TouchableOpacity
                                         style={[styles.resetButton, isLoading && styles.buttonDisabled]}
@@ -277,8 +327,7 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                                     </TouchableOpacity>
                                 </View>
                             </>
-                        )
-                        }
+                        )}
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

@@ -12,7 +12,7 @@ import { calculateDistance } from '@/utils/calculateDistance';
 const GYM_COORDINATES = {
     latitude: 49.84906983966339, //49.813937 poprawne
     longitude: 20.74353823284158, //20.680089 poprawne
-    radius: 10, // 18 poprawne
+    radius: 1, // 18 poprawne
 } as const;
 
 const LOCATION_TASK_NAME = 'background-location-task';
@@ -53,7 +53,7 @@ interface LocationTrackingState {
 
 // ================== UTILITY FUNCTIONS ==================
 /**
- * Sprawdza czy podana lokalizacja znajduje się w obrębie siłowni
+ * Checks if the given location is within the gym area
  */
 function isLocationInGym(coords: { latitude: number; longitude: number }): boolean {
     const distance = calculateDistance(
@@ -66,11 +66,11 @@ function isLocationInGym(coords: { latitude: number; longitude: number }): boole
 }
 
 /**
- * Mutex do zapobiegania równoczesnym operacjom na aktywności
+ * Mutex to prevent concurrent operations on activity
  */
 class ActivityMutex {
     private static isLocked = false;
-    private static lockTimeout: NodeJS.Timeout | null = null;
+    private static lockTimeout: number | null = null;
 
     static async acquire(): Promise<boolean> {
         if (this.isLocked) {
@@ -79,10 +79,10 @@ class ActivityMutex {
 
         this.isLocked = true;
 
-        // Automatyczne zwolnienie po 5 sekundach (zabezpieczenie)
+        // Automatic release after 5 seconds (safety measure)
         this.lockTimeout = setTimeout(() => {
             this.release();
-        }, 5000);
+        }, 5000) as unknown as number;
 
         return true;
     }
@@ -90,7 +90,7 @@ class ActivityMutex {
     static release(): void {
         this.isLocked = false;
         if (this.lockTimeout) {
-            clearTimeout(this.lockTimeout);
+            clearTimeout(this.lockTimeout as unknown as NodeJS.Timeout);
             this.lockTimeout = null;
         }
     }
@@ -98,49 +98,49 @@ class ActivityMutex {
 
 // ================== ACTIVITY MANAGEMENT ==================
 /**
- * Zarządzanie stanem aktywności z zabezpieczeniem przed duplikacją
+ * Activity state management with duplication protection
  */
 const ActivityManager = {
     /**
-     * Rozpoczyna nową aktywność
+     * Starts a new activity
      */
     async startNewActivity(userId: string): Promise<ActivityResponse | null> {
         if (!(await ActivityMutex.acquire())) {
-            console.log('Operacja już w toku, pomijam duplikat');
+            console.log('Operation already in progress, skipping duplicate');
             return null;
         }
 
         try {
-            // Sprawdź czy nie ma już aktywnej sesji
+            // Check if there's already an active session
             const existingActivity = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_ACTIVITY);
             if (existingActivity) {
-                console.log('Aktywność już istnieje, pomijam tworzenie nowej');
+                console.log('Activity already exists, skipping new creation');
                 return JSON.parse(existingActivity);
             }
 
-            // Rozpocznij nową aktywność
-            console.log('Rozpoczynam nową aktywność dla użytkownika:', userId);
+            // Start new activity
+            console.log('Starting new activity for user:', userId);
             const newActivity = await startActivity(userId);
 
-            // Zapisz do storage
+            // Save to storage
             await AsyncStorage.setItem(
                 STORAGE_KEYS.CURRENT_ACTIVITY,
                 JSON.stringify(newActivity)
             );
 
-            // Wyświetl alert o wejściu na siłownię
+            // Show gym entry alert
             Alert.alert(
                 '🏋️ Witaj na siłowni!',
                 'Trening został automatycznie rozpoczęty.',
                 [{ text: 'OK' }]
             );
 
-            // Wyślij powiadomienie
+            // Send notification
             await sendWorkoutStartedNotification(new Date(newActivity.startTime));
 
             return newActivity;
         } catch (error) {
-            console.error('Błąd podczas rozpoczynania aktywności:', error);
+            console.error('Error starting activity:', error);
             return null;
         } finally {
             ActivityMutex.release();
@@ -148,50 +148,50 @@ const ActivityManager = {
     },
 
     /**
-     * Kończy bieżącą aktywność
+     * Ends current activity
      */
     async endCurrentActivity(activityId: string): Promise<void> {
         if (!(await ActivityMutex.acquire())) {
-            console.log('Operacja już w toku, pomijam duplikat');
+            console.log('Operation already in progress, skipping duplicate');
             return;
         }
 
         try {
-            console.log('Kończę aktywność:', activityId);
+            console.log('Ending activity:', activityId);
             await endActivity(activityId);
             await AsyncStorage.removeItem(STORAGE_KEYS.CURRENT_ACTIVITY);
 
-            // Alert o zakończeniu treningu
+            // Workout completion alert
             Alert.alert(
                 '✅ Trening zakończony',
                 'Twój trening został automatycznie zapisany.',
                 [{ text: 'OK' }]
             );
         } catch (error) {
-            console.error('Błąd podczas kończenia aktywności: ' , error);
+            console.error('Error ending activity:', error);
         } finally {
             ActivityMutex.release();
         }
     },
 
     /**
-     * Aktualizuje status aktywności na podstawie lokalizacji
+     * Updates activity status based on location
      */
     async updateActivityStatus(
         isInGym: boolean,
         userId: string | null
     ): Promise<ActivityResponse | null> {
-        // Pobierz aktualny stan
+        // Get current state
         const storedActivityStr = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_ACTIVITY);
         const currentActivity = storedActivityStr ? JSON.parse(storedActivityStr) : null;
         const wasInGym = !!currentActivity;
 
-        // Wejście do siłowni
+        // Entering gym
         if (isInGym && !wasInGym && userId) {
             return await this.startNewActivity(userId);
         }
 
-        // Wyjście z siłowni
+        // Leaving gym
         if (!isInGym && wasInGym && currentActivity) {
             await this.endCurrentActivity(currentActivity.id);
             return null;
@@ -204,7 +204,7 @@ const ActivityManager = {
 // ================== BACKGROUND TASK ==================
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     if (error) {
-        console.error('[BACKGROUND] Błąd zadania:', error);
+        console.error('[BACKGROUND] Task error:', error);
         return;
     }
 
@@ -214,7 +214,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
             const location = locations[0];
             const inGym = isLocationInGym(location.coords);
 
-            console.log('[BACKGROUND] Status siłowni:', {
+            console.log('[BACKGROUND] Gym status:', {
                 isInGym: inGym,
                 timestamp: new Date().toISOString(),
                 coords: location.coords
@@ -239,7 +239,7 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
     const initializationDone = useRef(false);
 
     /**
-     * Inicjalizacja - wczytanie stanu z AsyncStorage
+     * Initialization - load state from AsyncStorage
      */
     useEffect(() => {
         if (initializationDone.current) return;
@@ -251,33 +251,33 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
                     const activity = JSON.parse(storedActivity);
                     setCurrentActivity(activity);
                     setIsInGym(true);
-                    console.log('Wczytano istniejącą aktywność:', activity.id);
+                    console.log('Loaded existing activity:', activity.id);
                 }
             } catch (error) {
-                console.error('Błąd wczytywania stanu początkowego:', error);
+                console.error('Error loading initial state:', error);
             }
         };
 
-        loadInitialState();
+        void loadInitialState();
         initializationDone.current = true;
     }, []);
 
     /**
-     * Zapisywanie userId dla zadania w tle
+     * Save userId for background task
      */
     useEffect(() => {
         if (userId) {
-            AsyncStorage.setItem(STORAGE_KEYS.USER_ID, userId);
+            void AsyncStorage.setItem(STORAGE_KEYS.USER_ID, userId);
         } else {
-            AsyncStorage.removeItem(STORAGE_KEYS.USER_ID);
+            void AsyncStorage.removeItem(STORAGE_KEYS.USER_ID);
         }
     }, [userId]);
 
     /**
-     * Obsługa aktualizacji lokalizacji (foreground)
+     * Handle location updates (foreground)
      */
     const handleLocationUpdate = useCallback(async (location: Location.LocationObject) => {
-        // Debouncing - ignoruj aktualizacje częstsze niż co 3 sekundy
+        // Debouncing - ignore updates more frequent than every 3 seconds
         const now = Date.now();
         if (now - lastLocationUpdate.current < 3000) {
             return;
@@ -292,13 +292,13 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
             GYM_COORDINATES.longitude
         );
 
-        console.log('[FOREGROUND] Lokalizacja:', {
+        console.log('[FOREGROUND] Location:', {
             isInGym: nowInGym,
             distance: `${distance.toFixed(2)}m`,
             timestamp: new Date().toISOString()
         });
 
-        // Aktualizuj stan tylko jeśli się zmienił
+        // Update state only if it changed
         if (nowInGym !== isInGym) {
             setIsInGym(nowInGym);
             const updatedActivity = await ActivityManager.updateActivityStatus(nowInGym, userId);
@@ -307,16 +307,16 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
     }, [userId, isInGym]);
 
     /**
-     * Rozpoczęcie śledzenia lokalizacji
+     * Start location tracking
      */
     const startTracking = useCallback(async () => {
         if (!userId || isTracking) {
-            console.log('Śledzenie już aktywne lub brak userId');
+            console.log('Tracking already active or missing userId');
             return;
         }
 
         try {
-            // Sprawdź uprawnienia
+            // Check permissions
             const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
             if (foregroundStatus !== 'granted') {
                 Alert.alert('Błąd', 'Aplikacja potrzebuje dostępu do lokalizacji.');
@@ -331,52 +331,52 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
                 );
             }
 
-            // Rejestracja powiadomień
+            // Register notifications
             await registerForPushNotificationsAsync();
 
-            // Uruchom śledzenie w tle (jeśli mamy uprawnienia)
+            // Start background tracking (if we have permissions)
             if (backgroundStatus === 'granted' &&
                 !(await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME))) {
                 await Location.startLocationUpdatesAsync(
                     LOCATION_TASK_NAME,
                     LOCATION_CONFIG.BACKGROUND
                 );
-                console.log('Uruchomiono śledzenie w tle');
+                console.log('Started background tracking');
             }
 
-            // Uruchom śledzenie na pierwszym planie
+            // Start foreground tracking
             if (!locationSubscription.current) {
                 locationSubscription.current = await Location.watchPositionAsync(
                     LOCATION_CONFIG.FOREGROUND,
                     handleLocationUpdate
                 );
-                console.log('Uruchomiono śledzenie na pierwszym planie');
+                console.log('Started foreground tracking');
             }
 
             setIsTracking(true);
         } catch (error) {
-            console.error('Błąd podczas uruchamiania śledzenia:', error);
+            console.error('Error starting tracking:', error);
             Alert.alert('Błąd', 'Nie udało się uruchomić śledzenia lokalizacji.');
         }
     }, [userId, isTracking, handleLocationUpdate]);
 
     /**
-     * Zatrzymanie śledzenia lokalizacji
+     * Stop location tracking
      */
     const stopTracking = useCallback(async () => {
         try {
-            // Zatrzymaj śledzenie na pierwszym planie
+            // Stop foreground tracking
             if (locationSubscription.current) {
                 locationSubscription.current.remove();
                 locationSubscription.current = null;
             }
 
-            // Zatrzymaj zadanie w tle
+            // Stop background task
             if (await TaskManager.isTaskRegisteredAsync(LOCATION_TASK_NAME)) {
                 await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
             }
 
-            // Zakończ aktywność jeśli jest w toku
+            // End activity if in progress
             if (currentActivity) {
                 await ActivityManager.endCurrentActivity(currentActivity.id);
                 setCurrentActivity(null);
@@ -384,14 +384,14 @@ export function useLocationTracking(userId: string | null): LocationTrackingStat
             }
 
             setIsTracking(false);
-            console.log('Zatrzymano śledzenie lokalizacji');
+            console.log('Stopped location tracking');
         } catch (error) {
-            console.error('Błąd podczas zatrzymywania śledzenia:', error);
+            console.error('Error stopping tracking:', error);
         }
     }, [currentActivity]);
 
     /**
-     * Cleanup przy odmontowaniu komponentu
+     * Cleanup on component unmount
      */
     useEffect(() => {
         return () => {

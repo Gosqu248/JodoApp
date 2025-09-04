@@ -1,3 +1,11 @@
+/**
+ * LoginScreen Component
+ *
+ * Main login screen for the Jodo application.
+ * Handles user authentication and navigation to registration and password reset.
+ *
+ * @returns {JSX.Element} Login screen with form
+ */
 import {
     StyleSheet,
     Text,
@@ -8,57 +16,112 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
-    StatusBar
+    StatusBar,
+    Linking
 } from 'react-native'
-import React, {useContext, useState} from 'react'
+import React, {useContext, useState, useEffect} from 'react'
 import {AuthContext} from "@/context/AuthContext";
 import {Image} from "expo-image";
 import {LinearGradient} from "expo-linear-gradient";
+import * as SecureStore from 'expo-secure-store';
 import RegisterScreen from './RegisterScreen';
-import PrivacyPolicy from './PrivacyPolicy';
 import ResetPasswordScreen from './ResetPasswordScreen';
-import {ErrorResponse} from "@/types/ErrorResponse";
+import {handleApiError} from "@/utils/errorHandler";
 
 export default function LoginScreen() {
+    // Get login function from AuthContext
     const { login } = useContext(AuthContext);
+
+    // Login form state
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [currentView, setCurrentView] = useState<'login' | 'register' | 'privacy' | 'terms' | 'reset'>('login');
+
+    // View management state (login, register, reset)
+    const [currentView, setCurrentView] = useState<'login' | 'register' | 'reset'>('login');
+
+    // Loading state during login
     const [isLoading, setIsLoading] = useState(false);
 
+    /**
+     * Load saved username on component mount
+     */
+    useEffect(() => {
+        loadSavedUsername();
+    }, []);
+
+    /**
+     * Load saved username from secure storage
+     */
+    const loadSavedUsername = async () => {
+        try {
+            const savedUsername = await SecureStore.getItemAsync('lastUsername');
+            if (savedUsername) {
+                setUsername(savedUsername);
+            }
+        } catch (error) {
+            console.log('Error loading saved username:', error);
+        }
+    };
+
+    /**
+     * Save username to secure storage for future use
+     */
+    const saveUsername = async (username: string) => {
+        try {
+            await SecureStore.setItemAsync('lastUsername', username);
+        } catch (error) {
+            console.log('Error saving username:', error);
+        }
+    };
+
+    /**
+     * Handles user login process
+     * Validates form fields and calls login function from AuthContext
+     */
     const handleLogin = async () => {
+        // Basic validation - check if fields are not empty
         if (!username || !password) {
-            Alert.alert('Błąd', 'Proszę wypełnić wszystkie pola');
+            Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
         setIsLoading(true);
         try {
             await login(username, password);
-        } catch (error: any) {
-            const errData = error?.response?.data as ErrorResponse;
-            const message =
-                errData?.message || error.message || 'Wystąpił nieoczekiwany błąd.';
-
-            Alert.alert('Błąd', message, [{ text: 'OK' }]);
+            // Save username for future logins if login is successful
+            await saveUsername(username);
+        } catch (error) {
+            handleApiError(error);
         } finally {
             setIsLoading(false);
         }
     };
 
+    /**
+     * Opens privacy policy link in browser
+     */
+    const openPrivacyPolicy = () => {
+        Linking.openURL('https://jodogym.com/polityka-prywatnosci');
+    };
+
+    /**
+     * Opens terms and conditions link in browser
+     */
+    const openTerms = () => {
+        Linking.openURL('https://jodogym.com/regulamin');
+    };
+
+    // Render registration screen
     if (currentView === 'register') {
         return <RegisterScreen onBackToLogin={() => setCurrentView('login')} />;
     }
 
-    if (currentView === 'privacy') {
-        return <PrivacyPolicy onBack={() => setCurrentView('login')} />;
-    }
-
+    // Render password reset screen
     if (currentView === 'reset') {
         return <ResetPasswordScreen onBackToLogin={() => setCurrentView('login')} />;
     }
 
-
+    // Main login screen view
     return (
         <LinearGradient
             colors={['#1a1a1a', '#ffc500']}
@@ -77,12 +140,15 @@ export default function LoginScreen() {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.contentContainer}>
+                        {/* App logo */}
                         <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
 
+                        {/* Welcome header */}
                         <Text style={styles.title}>Witamy ponownie!</Text>
                         <Text style={styles.subtitle}>Zaloguj się do swojego konta</Text>
 
                         <View style={styles.formContainer}>
+                            {/* Email field */}
                             <View style={styles.inputContainer}>
                                 <TextInput
                                     style={styles.input}
@@ -93,9 +159,13 @@ export default function LoginScreen() {
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     autoComplete="email"
+                                    autoCorrect={false}
+                                    textContentType="emailAddress"
+                                    returnKeyType="next"
                                 />
                             </View>
 
+                            {/* Password field */}
                             <View style={styles.inputContainer}>
                                 <TextInput
                                     style={styles.input}
@@ -104,17 +174,23 @@ export default function LoginScreen() {
                                     secureTextEntry
                                     value={password}
                                     onChangeText={setPassword}
-                                    autoComplete="password"
+                                    autoComplete="current-password"
+                                    textContentType="password"
+                                    autoCorrect={false}
+                                    returnKeyType="done"
+                                    onSubmitEditing={handleLogin}
                                 />
                             </View>
 
-                            <TouchableOpacity 
+                            {/* Forgot password link */}
+                            <TouchableOpacity
                                 style={styles.forgotPasswordContainer}
                                 onPress={() => setCurrentView('reset')}
                             >
                                 <Text style={styles.forgotPasswordText}>Zapomniałeś hasła?</Text>
                             </TouchableOpacity>
 
+                            {/* Login button */}
                             <TouchableOpacity
                                 style={[styles.loginButton, isLoading && styles.buttonDisabled]}
                                 onPress={handleLogin}
@@ -125,18 +201,31 @@ export default function LoginScreen() {
                                 </Text>
                             </TouchableOpacity>
 
+                            {/* Separator */}
                             <View style={styles.dividerContainer}>
                                 <View style={styles.divider} />
                                 <Text style={styles.dividerText}>lub</Text>
                                 <View style={styles.divider} />
                             </View>
 
+                            {/* Register button */}
                             <TouchableOpacity
                                 style={styles.registerButton}
                                 onPress={() => setCurrentView('register')}
                             >
                                 <Text style={styles.registerButtonText}>Utwórz nowe konto</Text>
                             </TouchableOpacity>
+
+                            {/* Privacy policy and terms links */}
+                            <View style={styles.legalLinksContainer}>
+                                <TouchableOpacity onPress={openPrivacyPolicy}>
+                                    <Text style={styles.legalLinkText}>Polityka Prywatności</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.legalSeparator}> | </Text>
+                                <TouchableOpacity onPress={openTerms}>
+                                    <Text style={styles.legalLinkText}>Regulamin</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
                 </ScrollView>
@@ -263,5 +352,23 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    // Nowe style dla linków prawnych
+    legalLinksContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    legalLinkText: {
+        color: '#ffffff',
+        fontSize: 14,
+        textDecorationLine: 'underline',
+        opacity: 0.8,
+    },
+    legalSeparator: {
+        color: '#ffffff',
+        fontSize: 14,
+        opacity: 0.8,
     },
 });

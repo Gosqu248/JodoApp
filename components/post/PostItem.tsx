@@ -4,7 +4,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     ImageSourcePropType,
-    View,
+    View, ColorValue,
 } from 'react-native';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -15,7 +15,7 @@ import {LinearGradient} from 'expo-linear-gradient';
 import {Post} from '@/types/Post';
 import Modal from 'react-native-modal';
 
-
+// Configure dayjs for Polish localization and relative time formatting
 dayjs.extend(relativeTime);
 dayjs.locale('pl');
 
@@ -28,8 +28,27 @@ interface PostItemProps {
     type?: Post['postType'];
 }
 
+/**
+ * PostItem Component
+ *
+ * Displays a single post item with adaptive styling based on post type.
+ * Features a modal for expanded view and custom styling for different post categories.
+ *
+ * Key Features:
+ * - Adaptive gradient and icon based on post type
+ * - Modal for detailed view with image and full description
+ * - Polish date formatting with relative time display
+ * - Touch interactions for opening modal
+ * - Responsive design with image overlay effects
+ *
+ * @param id - Unique post identifier
+ * @param title - Post title
+ * @param description - Post description content
+ * @param photo - Optional post image
+ * @param createdDate - Post creation date
+ * @param type - Post category type (defaults to 'OGŁOSZENIE')
+ */
 export default function PostItem({
-                                     id,
                                      title,
                                      description,
                                      photo,
@@ -41,27 +60,35 @@ export default function PostItem({
     const openModal = () => setModalVisible(true);
     const closeModal = () => setModalVisible(false);
 
-
+    /**
+     * Formats the creation date for display
+     * Shows relative time for today's posts, otherwise shows DD.MM.YYYY format
+     */
     const dateText = dayjs(createdDate).isValid()
         ? dayjs(createdDate).isSame(dayjs(), 'day')
             ? dayjs(createdDate).fromNow()
             : dayjs(createdDate).format('DD.MM.YYYY')
         : '';
 
+    /**
+     * Returns styling configuration based on post type
+     * Each type has its own gradient colors, icon, and badge styling
+     * @returns Configuration object with gradient, icon, badge text and color
+     */
     const getTypeConfig = () => {
         switch (type) {
             case 'ZAMKNIĘCIE':
-                return {gradient: ['#FF6B6B', '#FF8E8E'], icon: '🔒', badge: 'ZAMKNIĘCIE', badgeColor: '#FF4444'};
+                return {gradient: ['#FF6B6B', '#FF8E8E'] as readonly [ColorValue, ColorValue], icon: '🔒', badge: 'ZAMKNIĘCIE', badgeColor: '#FF4444'};
             case 'PROMOCJA':
-                return {gradient: ['#ffb300', '#edce32', ], icon: '💪', badge: 'PROMOCJA', badgeColor: '#FFA000'};
+                return {gradient: ['#ffb300', '#edce32'] as readonly [ColorValue, ColorValue], icon: '💪', badge: 'PROMOCJA', badgeColor: '#FFA000'};
             case 'NOWOŚĆ':
-                return {gradient: ['#4ECDC4', '#44A08D'], icon: '🆕', badge: 'NOWOŚĆ', badgeColor: '#00BFA5'};
+                return {gradient: ['#4ECDC4', '#44A08D'] as readonly [ColorValue, ColorValue], icon: '🆕', badge: 'NOWOŚĆ', badgeColor: '#00BFA5'};
             case 'ZAJĘCIA':
-                return {gradient: ['#42A5F5', '#1E88E5'], icon: '🏋️‍♀️', badge: 'ZAJĘCIA', badgeColor: '#1565C0'};
+                return {gradient: ['#42A5F5', '#1E88E5'] as readonly [ColorValue, ColorValue], icon: '🏋️‍♀️', badge: 'ZAJĘCIA', badgeColor: '#1565C0'};
             case 'WYDARZENIE':
-                return {gradient: ['#AB47BC', '#8E24AA'], icon: '📅', badge: 'WYDARZENIE', badgeColor: '#6A1B9A'};
+                return {gradient: ['#AB47BC', '#8E24AA'] as readonly [ColorValue, ColorValue], icon: '📅', badge: 'WYDARZENIE', badgeColor: '#6A1B9A'};
             default:
-                return {gradient: ['#667eea', '#764ba2'], icon: '📢', badge: 'OGŁOSZENIE', badgeColor: '#5E72E4'};
+                return {gradient: ['#667eea', '#764ba2'] as readonly [ColorValue, ColorValue], icon: '📢', badge: 'OGŁOSZENIE', badgeColor: '#5E72E4'};
         }
     };
 
@@ -70,6 +97,7 @@ export default function PostItem({
     return (
         <>
             <ThemedView style={styles.container}>
+                {/* Header with gradient background, icon, date, and badge */}
                 <LinearGradient colors={typeConfig.gradient} style={styles.headerGradient} start={{x: 0, y: 0}}
                                 end={{x: 1, y: 0}}>
                     <View style={styles.headerContent}>
@@ -84,6 +112,7 @@ export default function PostItem({
                     </View>
                 </LinearGradient>
 
+                {/* Optional image with overlay gradient */}
                 {photo && (
                     <View style={styles.imageContainer}>
                         <Image source={photo} style={styles.image}/>
@@ -91,21 +120,25 @@ export default function PostItem({
                     </View>
                 )}
 
+                {/* Main content with title, description, and read more button */}
                 <TouchableOpacity style={styles.contentContainer} onPress={openModal}>
                     <ThemedText style={styles.title}>{title}</ThemedText>
                     <ThemedText style={styles.description} numberOfLines={1}>
                         {description}
                     </ThemedText>
 
-                    <View style={styles.readMoreContainer} >
-                        <ThemedText style={[styles.readMore, {color: typeConfig.badgeColor}]}>Zobacz więcej
-                            ▼</ThemedText>
+                    <View style={styles.readMoreContainer}>
+                        <ThemedText style={[styles.readMore, {color: typeConfig.badgeColor}]}>
+                            Zobacz więcej ▼
+                        </ThemedText>
                     </View>
-
                 </TouchableOpacity>
+
+                {/* Accent line at bottom matching post type color */}
                 <View style={[styles.accentLine, {backgroundColor: typeConfig.badgeColor}]}/>
             </ThemedView>
 
+            {/* Modal for expanded post view */}
             <Modal
                 isVisible={modalVisible}
                 onSwipeComplete={closeModal}
@@ -114,7 +147,10 @@ export default function PostItem({
                 style={{margin: 0}}
             >
                 <ThemedView style={styles.modalContainer}>
+                        {/* Full-size image in modal */}
                         {photo && <Image source={photo} style={styles.modalImage} resizeMode={"contain"}/>}
+
+                        {/* Modal content with full title, description, date and close button */}
                         <View style={styles.infoContainer}>
                             <ThemedText style={styles.modalTitle}>{title}</ThemedText>
                             <ThemedText style={styles.modalDescription}>{description}</ThemedText>

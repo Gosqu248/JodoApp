@@ -18,12 +18,11 @@ import { useRouter } from 'expo-router';
 import { getUserPhoto } from '@/api/user';
 import ChangePasswordModal from './ChangePasswordModal';
 import ChangePhotoModal from './ChangePhotoModal';
-import { formatPhoneNumber } from '@/utils/formatters';
+import { formatPhoneNumber, formatDate } from '@/utils/formatters';
 import { getLastPurchase } from '@/api/purchase';
 import {MembershipPurchase} from "@/types/MembershipPurchase";
-import SettingsSlidePanel from "@/components/user/SeetingsSidePanel";
+import SettingsSlidePanel from "@/components/user/SettingsSidePanel";
 import {ErrorResponse} from "@/types/ErrorResponse";
-import { formatDate } from '@/utils/formatters';
 
 export default function UserProfileScreen() {
     const { user, logout } = useAuth();
@@ -71,7 +70,7 @@ export default function UserProfileScreen() {
             }
         };
         fetchLastPurchase();
-    }, [membership?.id]);
+    }, [membership?.id, membership?.isActive]);
 
     useEffect(() => {
         if (error) {

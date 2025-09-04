@@ -6,7 +6,7 @@ import {
     ScrollView,
     StatusBar,
     ActivityIndicator,
-    Alert, SafeAreaView
+    SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MembershipType } from "@/types/MembershipType";
@@ -20,14 +20,32 @@ interface GroupedMembershipTypes {
     open: MembershipType[];
 }
 
+/**
+ * TypesScreen Component
+ *
+ * Main screen for displaying available membership types organized by category.
+ * Features automatic categorization, loading states, and empty state handling.
+ *
+ * Key Features:
+ * - Fetches and displays active membership types from API
+ * - Automatically groups memberships by type (one-time, gym, open)
+ * - Responsive sections with descriptive headers
+ * - Loading and error handling with user feedback
+ * - Empty state when no memberships are available
+ */
 export default function TypesScreen() {
     const [membershipTypes, setMembershipTypes] = useState<MembershipType[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Fetch membership types on component mount
     useEffect(() => {
         fetchMembershipTypes();
     }, []);
 
+    /**
+     * Fetches active membership types from API
+     * Handles loading states and error scenarios
+     */
     const fetchMembershipTypes = async () => {
         try {
             setLoading(true);
@@ -40,6 +58,11 @@ export default function TypesScreen() {
         }
     };
 
+    /**
+     * Groups membership types into categories based on duration and features
+     * @param types - Array of membership types to categorize
+     * @returns Grouped membership types object
+     */
     const groupMembershipTypes = (types: MembershipType[]): GroupedMembershipTypes => {
         const grouped: GroupedMembershipTypes = {
             oneTime: [],
@@ -63,11 +86,20 @@ export default function TypesScreen() {
         return grouped;
     };
 
+    /**
+     * Renders a section of membership types with header and description
+     * @param title - Section title
+     * @param types - Array of membership types for this section
+     * @param icon - Icon to display in section header
+     * @param description - Section description text
+     * @returns JSX element or null if no types in section
+     */
     const renderSection = (title: string, types: MembershipType[], icon: keyof typeof Ionicons.glyphMap, description: string) => {
         if (types.length === 0) return null;
 
         return (
             <View style={styles.section}>
+                {/* Section header with icon, title, description and underline */}
                 <View style={styles.sectionHeader}>
                     <View style={styles.sectionTitleContainer}>
                         <View style={styles.sectionIconContainer}>
@@ -81,6 +113,7 @@ export default function TypesScreen() {
                     <View style={styles.sectionTitleUnderline} />
                 </View>
 
+                {/* List of membership types in this section */}
                 <View style={styles.typesContainer}>
                     {types.map((type) => (
                         <TypeItem
@@ -93,6 +126,7 @@ export default function TypesScreen() {
         );
     };
 
+    // Show loading screen while fetching data
     if (loading) {
         return (
             <View style={styles.container}>
@@ -141,6 +175,7 @@ export default function TypesScreen() {
                     )}
                 </View>
 
+                {/* Empty state when no membership types are available */}
                 {membershipTypes.length === 0 && (
                     <View style={styles.emptyState}>
                         <View style={styles.emptyIconContainer}>

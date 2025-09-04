@@ -17,6 +17,19 @@ import PurchaseItem from './PurchaseItem';
 import {getPurchasesByMembershipId} from "@/api/purchase";
 import {useUser} from "@/context/UserContext";
 
+/**
+ * PurchaseScreen Component
+ *
+ * Main screen for displaying user's purchase history and statistics.
+ * Features pull-to-refresh, loading states, empty states, and purchase analytics.
+ *
+ * Key Features:
+ * - Displays total purchases count and spending
+ * - Shows purchase history with individual items
+ * - Pull-to-refresh functionality
+ * - Loading and error handling
+ * - Empty state when no purchases exist
+ */
 export default function PurchaseScreen() {
     const [purchases, setPurchases] = useState<MembershipPurchase[]>([]);
     const [total, setTotal] = useState<number>(0);
@@ -24,12 +37,17 @@ export default function PurchaseScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const { membership } = useUser();
 
+    // Fetch purchases when membership changes
     useEffect(() => {
         if (membership?.id) {
             fetchPurchases();
         }
     }, [membership]);
 
+    /**
+     * Fetches purchase data from API based on current membership ID
+     * Handles loading states and error scenarios
+     */
     const fetchPurchases = useCallback(async () => {
         if (!membership?.id) return;
 
@@ -38,24 +56,31 @@ export default function PurchaseScreen() {
             const response = await getPurchasesByMembershipId(membership.id);
             setPurchases(response.content || []);
             setTotal(response.totalElements || 0);
-        } catch (error) {
-            console.error('Error fetching purchases:', error);
+        } catch {
             Alert.alert('Błąd', 'Wystąpił błąd podczas pobierania danych zakupów');
         } finally {
             setLoading(false);
         }
     }, [membership?.id]);
 
+    /**
+     * Handles pull-to-refresh functionality
+     */
     const onRefresh = async () => {
         setRefreshing(true);
         await fetchPurchases();
         setRefreshing(false);
     };
 
+    /**
+     * Calculates total amount spent across all purchases
+     * @returns Total spending amount
+     */
     const calculateTotalSpent = (): number => {
         return purchases.reduce((total, purchase) => total + purchase.price, 0);
     };
 
+    // Show loading screen while fetching initial data
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
@@ -85,7 +110,7 @@ export default function PurchaseScreen() {
                     />
                 }
             >
-                {/* Header Stats */}
+                {/* Header section with title and description */}
                 <View style={styles.headerSection}>
                     <LinearGradient
                         colors={['#ffd500', '#ff9000']}
@@ -101,9 +126,10 @@ export default function PurchaseScreen() {
                     </LinearGradient>
                 </View>
 
-                {/* Quick Stats */}
+                {/* Statistics cards showing purchase metrics */}
                 <View style={styles.statsSection}>
                     <View style={styles.statsRow}>
+                        {/* Total purchases count card */}
                         <View style={styles.statCard}>
                             <View style={styles.statIconContainer}>
                                 <Ionicons name="card" size={20} color="#4CAF50" />
@@ -114,6 +140,7 @@ export default function PurchaseScreen() {
                             </View>
                         </View>
 
+                        {/* Total spending card */}
                         <View style={styles.statCard}>
                             <View style={styles.statIconContainer}>
                                 <Ionicons name="trending-up" size={20} color="#2196F3" />
@@ -131,7 +158,7 @@ export default function PurchaseScreen() {
                     </View>
                 </View>
 
-                {/* Purchases List */}
+                {/* Purchase history list */}
                 <View style={styles.listSection}>
                     <View style={styles.listHeader}>
                         <Text style={styles.listTitle}>Historia zakupów</Text>
@@ -150,6 +177,7 @@ export default function PurchaseScreen() {
                             ))}
                         </View>
                     ) : (
+                        // Empty state when no purchases exist
                         <View style={styles.emptyState}>
                             <View style={styles.emptyIconContainer}>
                                 <Ionicons name="receipt-outline" size={64} color="#d1d5db" />

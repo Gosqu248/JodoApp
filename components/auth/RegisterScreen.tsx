@@ -1,3 +1,12 @@
+/**
+ * RegisterScreen Component
+ *
+ * Registration screen for new users of the Jodo application.
+ * Contains registration form with data validation and links to legal documents.
+ *
+ * @param {RegisterScreenProps} props - Component properties
+ * @returns {JSX.Element} Registration screen
+ */
 import {
     Alert,
     ScrollView,
@@ -8,49 +17,58 @@ import {
     View,
     KeyboardAvoidingView,
     Platform,
-    StatusBar
+    StatusBar,
+    Linking
 } from 'react-native'
 import React, {useState, useContext} from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
 import {Ionicons} from "@expo/vector-icons";
 import {Image} from "expo-image";
-import PrivacyPolicy from './PrivacyPolicy';
-import Terms from './Terms';
 import {AuthContext} from "@/context/AuthContext";
-import {ErrorResponse} from "@/types/ErrorResponse";
+import {handleApiError} from "@/utils/errorHandler";
 
 interface RegisterScreenProps {
     onBackToLogin: () => void;
 }
 
 export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
+    // Get register function from AuthContext
     const { register } = useContext(AuthContext);
 
+    // Registration form state
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [acceptTerms, setAcceptTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [currentView, setCurrentView] = useState<'register' | 'privacy' | 'terms'>('register');
+
+    // Validation errors state
     const [errors, setErrors] = useState<{
         email?: string;
         password?: string;
         confirmPassword?: string;
     }>({});
 
-    const validateForm = () => {
+    /**
+     * Validates registration form
+     * Checks email validity, password strength and confirmation match
+     * @returns {boolean} True if form is valid
+     */
+    const validateForm = (): boolean => {
         const newErrors: {
             email?: string;
             password?: string;
             confirmPassword?: string;
         } = {};
 
+        // Email validation
         if (!email.trim()) {
             newErrors.email = 'Proszę podać email';
         } else if (!email.includes('@')) {
             newErrors.email = 'Proszę podać prawidłowy adres email';
         }
 
+        // Password validation
         if (!password.trim()) {
             newErrors.password = 'Proszę podać hasło';
         } else if (password.length < 6) {
@@ -59,6 +77,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
             newErrors.password = 'Hasło musi zawierać małą literę, dużą literę i cyfrę';
         }
 
+        // Password confirmation validation
         if (!confirmPassword.trim()) {
             newErrors.confirmPassword = 'Proszę potwierdzić hasło';
         } else if (password !== confirmPassword) {
@@ -67,10 +86,12 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
 
         setErrors(newErrors);
 
+        // Check if there are validation errors
         if (Object.keys(newErrors).length > 0) {
             return false;
         }
 
+        // Check terms acceptance
         if (!acceptTerms) {
             Alert.alert('Błąd', 'Musisz zaakceptować regulamin i politykę prywatności');
             return false;
@@ -79,6 +100,11 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
         return true;
     };
 
+    /**
+     * Updates form field and clears corresponding error
+     * @param {string} field - Field name to update
+     * @param {string} value - New field value
+     */
     const updateField = (field: 'email' | 'password' | 'confirmPassword', value: string) => {
         switch (field) {
             case 'email':
@@ -92,35 +118,38 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                 break;
         }
 
+        // Clear error for the field
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: undefined }));
         }
     };
 
+    /**
+     * Handles user registration process
+     * Validates form and calls register function from AuthContext
+     */
     const handleRegister = async () => {
         if (!validateForm()) return;
 
         setIsLoading(true);
         try {
             await register(email, password);
-                Alert.alert(
-                    'Sukces!',
-                    'Konto zostało utworzone pomyślnie. Możesz się teraz zalogować.',
-                    [{ text: 'OK', onPress: onBackToLogin }]
-                );
-        } catch (error: any) {
-            const errData = error?.response?.data as ErrorResponse;
-            const message =
-                errData?.message || error.message || 'Wystąpił nieoczekiwany błąd.';
-
-            Alert.alert('Błąd', message, [{ text: 'OK' }]);
+            Alert.alert(
+                'Sukces!',
+                'Konto zostało utworzone pomyślnie. Możesz się teraz zalogować.',
+                [{ text: 'OK', onPress: onBackToLogin }]
+            );
+        } catch (error) {
+            handleApiError(error);
         } finally {
             resetForm();
             setIsLoading(false);
-
         }
     };
 
+    /**
+     * Resets form to initial state
+     */
     const resetForm = () => {
         setEmail('');
         setPassword('');
@@ -129,19 +158,19 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
         setErrors({});
     }
 
-    if (currentView === 'privacy') {
-        return <PrivacyPolicy 
-            onBack={() => setCurrentView('register')} 
-            onViewTerms={() => setCurrentView('terms')}
-        />;
-    }
+    /**
+     * Opens privacy policy link in browser
+     */
+    const openPrivacyPolicy = () => {
+        Linking.openURL('https://jodogym.com/polityka-prywatnosci');
+    };
 
-    if (currentView === 'terms') {
-        return <Terms 
-            onBack={() => setCurrentView('register')} 
-            onViewPrivacy={() => setCurrentView('privacy')}
-        />;
-    }
+    /**
+     * Opens terms and conditions link in browser
+     */
+    const openTerms = () => {
+        Linking.openURL('https://jodogym.com/regulamin');
+    };
 
     return (
         <LinearGradient
@@ -160,12 +189,15 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
+                    {/* App logo */}
                     <Image source={require('@/assets/images/Jodo.png')} style={styles.logo} />
 
+                    {/* Header */}
                     <Text style={styles.title}>Utwórz konto</Text>
                     <Text style={styles.subtitle}>Dołącz do nas już dziś!</Text>
 
                     <View style={styles.formContainer}>
+                        {/* Email field */}
                         <View style={styles.inputContainer}>
                             <TextInput
                                 style={[styles.input, errors.email && styles.inputError]}
@@ -180,6 +212,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
                         </View>
 
+                        {/* Password field */}
                         <View style={styles.inputContainer}>
                             <TextInput
                                 style={[styles.input, errors.password && styles.inputError]}
@@ -193,6 +226,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                             {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                         </View>
 
+                        {/* Password confirmation field */}
                         <View style={styles.inputContainer}>
                             <TextInput
                                 style={[styles.input, errors.confirmPassword && styles.inputError]}
@@ -206,7 +240,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                             {errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
                         </View>
 
-                        {/* Dodaj sekcję wymagań hasła */}
+                        {/* Password requirements section */}
                         <View style={styles.passwordRequirements}>
                             <Text style={styles.requirementsTitle}>Wymagania hasła:</Text>
                             <Text style={styles.requirementText}>• Co najmniej 6 znaków</Text>
@@ -215,6 +249,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                             <Text style={styles.requirementText}>• Zawiera cyfrę</Text>
                         </View>
 
+                        {/* Terms acceptance checkbox with links */}
                         <TouchableOpacity
                             style={styles.checkboxContainer}
                             onPress={() => setAcceptTerms(!acceptTerms)}
@@ -226,16 +261,17 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                                 Akceptuję{' '}
                                 <Text
                                     style={styles.linkText}
-                                    onPress={() => setCurrentView('terms')}
+                                    onPress={openTerms}
                                 >Regulamin</Text>
                                 {' '}i{' '}
                                 <Text
                                     style={styles.linkText}
-                                    onPress={() => setCurrentView('privacy')}
+                                    onPress={openPrivacyPolicy}
                                 >Politykę Prywatności</Text>
                             </Text>
                         </TouchableOpacity>
 
+                        {/* Registration button */}
                         <TouchableOpacity
                             style={[styles.registerButton, isLoading && styles.buttonDisabled]}
                             onPress={handleRegister}
@@ -246,6 +282,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
                             </Text>
                         </TouchableOpacity>
 
+                        {/* Login link */}
                         <View style={styles.loginContainer}>
                             <Text style={styles.loginText}>Masz już konto? </Text>
                             <TouchableOpacity onPress={onBackToLogin}>
@@ -258,6 +295,7 @@ export default function RegisterScreen({ onBackToLogin}: RegisterScreenProps) {
         </LinearGradient>
     )
 }
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,

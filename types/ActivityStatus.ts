@@ -1,7 +1,7 @@
 import {ActivityResponse} from "@/types/ActivityResponse";
+import {PageResponse} from "@/types/PageResponse";
 
 export interface ActivityStatus {
     totalMinutes: number;
-    sessionsCount: number;
-    activities: ActivityResponse[];
+    activities: PageResponse<ActivityResponse>;
 }

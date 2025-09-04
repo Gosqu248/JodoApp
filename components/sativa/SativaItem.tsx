@@ -1,33 +1,81 @@
-import {Image, Linking, StyleSheet, TouchableOpacity, View} from 'react-native'
-import React from 'react'
-import {ThemedText} from "@/components/ThemedText";
-import {SativaProduct} from "@/types/SativaProduct";
+import { Image, Linking, StyleSheet, TouchableOpacity, View, Alert } from 'react-native'
+import React, { useCallback } from 'react'
+import { ThemedText } from "@/components/ThemedText";
+import { SativaProduct } from "@/types/SativaProduct";
+import { formatPrice } from "@/utils/formatters";
 
-const SativaItem = ({
-                        item
-}: {item: SativaProduct}) => {
+interface SativaItemProps {
+    item: SativaProduct;
+}
 
-    const goToProductDetail = () => {
-            if (item.productUrl) {
-                Linking.openURL(item.productUrl);
+/**
+ * SativaItem Component
+ *
+ * Displays a single Sativa product with image, title, and price.
+ * Features:
+ * - Product image with fallback handling
+ * - Price formatting in Polish currency (zł)
+ * - External link navigation to product details
+ * - Error handling for invalid URLs
+ * - Optimized for grid layout (48% width)
+ */
+const SativaItem = ({ item }: SativaItemProps) => {
+
+    /**
+     * Handle navigation to product detail page
+     * Opens the product URL in the default browser with error handling
+     */
+    const goToProductDetail = useCallback(() => {
+        if (!item.productUrl) {
+            Alert.alert('Błąd', 'Link do produktu jest niedostępny');
+            return;
+        }
+
+        // Validate URL format before opening
+        try {
+            const url = new URL(item.productUrl);
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                return;
             }
-    }
+            Linking.openURL(item.productUrl);
+        } catch {
+            Alert.alert('Błąd', 'Nieprawidłowy adres URL produktu');
+        }
+    }, [item.productUrl]);
 
     return (
-        <TouchableOpacity style={styles.productItem} onPress={goToProductDetail}>
-            <Image source={{ uri: item.image }} style={styles.productImage} />
+        <TouchableOpacity
+            style={styles.productItem}
+            onPress={goToProductDetail}
+            activeOpacity={0.8}
+            accessibilityLabel={`${item.title}, cena ${formatPrice(item.price)}`}
+            accessibilityHint="Dotknij aby otworzyć szczegóły produktu"
+        >
+            {/* Product image with fallback background */}
+            <Image
+                source={{ uri: item.image }}
+                style={styles.productImage}
+                resizeMode="cover"
+                onError={(error) => {
+                    console.warn('Failed to load product image:', item.image, error.nativeEvent.error);
+                }}
+            />
+
+            {/* Product information */}
             <View style={styles.productInfo}>
                 <ThemedText style={styles.productTitle} numberOfLines={2}>
                     {item.title}
                 </ThemedText>
                 <ThemedText style={styles.productPrice}>
-                    {item.price.toFixed(2)} zł
+                    {formatPrice(item.price)} zł
                 </ThemedText>
             </View>
         </TouchableOpacity>
     )
 }
-export default SativaItem
+
+export default SativaItem;
+
 const styles = StyleSheet.create({
     productItem: {
         width: '48%',
@@ -43,16 +91,19 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 3.84,
         elevation: 5,
+        // Ensure proper layout in flex containers
+        alignSelf: 'stretch',
     },
     productImage: {
         width: '100%',
         height: 140,
         borderRadius: 8,
         marginBottom: 10,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: '#f0f0f0', // Fallback background color
     },
     productInfo: {
         flex: 1,
+        justifyContent: 'space-between',
     },
     productTitle: {
         fontSize: 14,
@@ -60,10 +111,13 @@ const styles = StyleSheet.create({
         color: '#333',
         marginBottom: 8,
         lineHeight: 18,
+        // Ensure proper text wrapping
+        flexWrap: 'wrap',
     },
     productPrice: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#4CAF50',
+        color: '#e4131d',
+        textAlign: 'left',
     },
-})
+});

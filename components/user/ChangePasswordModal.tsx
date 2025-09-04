@@ -19,7 +19,7 @@ import {ErrorResponse} from "@/types/ErrorResponse";
 interface ChangePasswordModalProps {
     visible: boolean;
     onClose: () => void;
-    userId?: string;
+    userId?: string; // Optional for future use
 }
 
 interface PasswordData {
@@ -28,6 +28,10 @@ interface PasswordData {
     confirmPassword: string;
 }
 
+/**
+ * Modal component for changing user password
+ * Includes validation, secure input fields, and proper error handling
+ */
 export default function ChangePasswordModal({ visible, onClose }: ChangePasswordModalProps) {
     const [formData, setFormData] = useState<PasswordData>({
         currentPassword: '',
@@ -40,21 +44,30 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [errors, setErrors] = useState<Partial<PasswordData>>({});
 
+    /**
+     * Validate form fields according to password policy
+     * @returns boolean indicating if form is valid
+     */
     const validateForm = (): boolean => {
         const newErrors: Partial<PasswordData> = {};
 
+        // Current password validation
         if (!formData.currentPassword.trim()) {
             newErrors.currentPassword = 'Obecne hasło jest wymagane';
         }
 
+        // New password validation
         if (!formData.newPassword.trim()) {
             newErrors.newPassword = 'Nowe hasło jest wymagane';
         } else if (formData.newPassword.length < 6) {
             newErrors.newPassword = 'Hasło musi mieć co najmniej 6 znaków';
         } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.newPassword)) {
             newErrors.newPassword = 'Hasło musi zawierać małą literę, dużą literę i cyfrę';
+        } else if (formData.newPassword === formData.currentPassword) {
+            newErrors.newPassword = 'Nowe hasło musi być różne od obecnego';
         }
 
+        // Confirm password validation
         if (!formData.confirmPassword.trim()) {
             newErrors.confirmPassword = 'Potwierdzenie hasła jest wymagane';
         } else if (formData.newPassword !== formData.confirmPassword) {
@@ -65,6 +78,9 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
         return Object.keys(newErrors).length === 0;
     };
 
+    /**
+     * Handle form submission
+     */
     const handleSubmit = async () => {
         if (!validateForm()) {
             return;
@@ -92,6 +108,7 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
                 ]
             );
         } catch (error: any) {
+            console.error('Error changing password:', error);
             const errData = error?.response?.data as ErrorResponse;
 
             const message =
@@ -106,6 +123,9 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
         }
     };
 
+    /**
+     * Reset form to initial state
+     */
     const resetForm = () => {
         setFormData({
             currentPassword: '',
@@ -113,15 +133,27 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
             confirmPassword: ''
         });
         setErrors({});
+        setShowCurrentPassword(false);
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
     };
 
+    /**
+     * Handle modal close with form reset
+     */
     const handleClose = () => {
-        resetForm();
-        onClose();
+        if (!loading) {
+            resetForm();
+            onClose();
+        }
     };
 
+    /**
+     * Update form field and clear associated error
+     */
     const updateFormData = (field: keyof PasswordData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+        // Clear error for this field when user starts typing
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: undefined }));
         }
@@ -142,22 +174,23 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
                     <ScrollView
                         contentContainerStyle={styles.scrollContainer}
                         keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
                     >
                         {/* Header */}
                         <View style={styles.header}>
                             <Text style={styles.title}>Zmień hasło</Text>
                             <TouchableOpacity
-                                style={styles.closeButton}
+                                style={[styles.closeButton, loading && styles.disabledButton]}
                                 onPress={handleClose}
                                 disabled={loading}
                             >
-                                <Ionicons name="close" size={24} color="#000" />
+                                <Ionicons name="close" size={24} color={loading ? "#ccc" : "#000"} />
                             </TouchableOpacity>
                         </View>
 
                         {/* Form */}
                         <View style={styles.form}>
-                            {/* Obecne hasło */}
+                            {/* Current Password Field */}
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Obecne hasło</Text>
                                 <View style={styles.passwordContainer}>
@@ -171,15 +204,18 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
                                         placeholder="Wprowadź obecne hasło"
                                         secureTextEntry={!showCurrentPassword}
                                         editable={!loading}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
                                     />
                                     <TouchableOpacity
                                         style={styles.eyeButton}
                                         onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                                        disabled={loading}
                                     >
                                         <Ionicons
                                             name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
                                             size={20}
-                                            color="#666"
+                                            color={loading ? "#ccc" : "#666"}
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -188,7 +224,7 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
                                 )}
                             </View>
 
-                            {/* Nowe hasło */}
+                            {/* New Password Field */}
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Nowe hasło</Text>
                                 <View style={styles.passwordContainer}>
@@ -202,15 +238,18 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
                                         placeholder="Wprowadź nowe hasło"
                                         secureTextEntry={!showNewPassword}
                                         editable={!loading}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
                                     />
                                     <TouchableOpacity
                                         style={styles.eyeButton}
                                         onPress={() => setShowNewPassword(!showNewPassword)}
+                                        disabled={loading}
                                     >
                                         <Ionicons
                                             name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
                                             size={20}
-                                            color="#666"
+                                            color={loading ? "#ccc" : "#666"}
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -219,7 +258,7 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
                                 )}
                             </View>
 
-                            {/* Potwierdzenie hasła */}
+                            {/* Confirm Password Field */}
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Potwierdź nowe hasło</Text>
                                 <View style={styles.passwordContainer}>
@@ -233,15 +272,18 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
                                         placeholder="Potwierdź nowe hasło"
                                         secureTextEntry={!showConfirmPassword}
                                         editable={!loading}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
                                     />
                                     <TouchableOpacity
                                         style={styles.eyeButton}
                                         onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        disabled={loading}
                                     >
                                         <Ionicons
                                             name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                                             size={20}
-                                            color="#666"
+                                            color={loading ? "#ccc" : "#666"}
                                         />
                                     </TouchableOpacity>
                                 </View>
@@ -250,24 +292,27 @@ export default function ChangePasswordModal({ visible, onClose }: ChangePassword
                                 )}
                             </View>
 
-                            {/* Wymagania hasła */}
+                            {/* Password Requirements */}
                             <View style={styles.passwordRequirements}>
                                 <Text style={styles.requirementsTitle}>Wymagania hasła:</Text>
                                 <Text style={styles.requirementText}>• Co najmniej 6 znaków</Text>
                                 <Text style={styles.requirementText}>• Zawiera małą literę</Text>
                                 <Text style={styles.requirementText}>• Zawiera dużą literę</Text>
                                 <Text style={styles.requirementText}>• Zawiera cyfrę</Text>
+                                <Text style={styles.requirementText}>• Różne od obecnego hasła</Text>
                             </View>
                         </View>
 
-                        {/* Buttons */}
+                        {/* Action Buttons */}
                         <View style={styles.buttonContainer}>
                             <TouchableOpacity
-                                style={styles.cancelButton}
+                                style={[styles.cancelButton, loading && styles.disabledButton]}
                                 onPress={handleClose}
                                 disabled={loading}
                             >
-                                <Text style={styles.cancelButtonText}>Anuluj</Text>
+                                <Text style={[styles.cancelButtonText, loading && styles.disabledText]}>
+                                    Anuluj
+                                </Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -329,6 +374,9 @@ const styles = StyleSheet.create({
         padding: 8,
         backgroundColor: '#f5f5f5',
         borderRadius: 20,
+    },
+    disabledButton: {
+        opacity: 0.5,
     },
     form: {
         marginBottom: 24,
@@ -407,6 +455,9 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#666',
+    },
+    disabledText: {
+        color: '#ccc',
     },
     submitButton: {
         flex: 1,

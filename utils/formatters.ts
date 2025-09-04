@@ -1,20 +1,13 @@
-export function formatActivityDuration(minutes: number): string {
-    const totalMinutes = Math.floor(minutes);
-    const hours = Math.floor(totalMinutes / 60);
-    const remainingMinutes = totalMinutes % 60;
-
-    if (hours > 0) {
-        return `${hours}h ${remainingMinutes}min`;
-    } else {
-        return `${remainingMinutes}min`;
-    }
-}
-
 export interface DurationFormattable {
     durationMonths?: number;
     durationWeeks?: number;
 }
 
+/**
+ * Formats membership duration based on months and weeks
+ * @param item - Object containing duration information
+ * @returns Formatted duration string
+ */
 export const formatDuration = (item: DurationFormattable): string => {
     const durationMonths = item.durationMonths || 0;
     const durationWeeks = item.durationWeeks || 0;
@@ -33,13 +26,41 @@ export const formatDuration = (item: DurationFormattable): string => {
     }
 };
 
+/**
+ * Formats activity duration from minutes to human-readable string
+ * @param minutes - Duration in minutes
+ * @returns Formatted duration string (e.g., "1h 30min" or "45min")
+ */
+export function formatActivityDuration(minutes: number): string {
+    const totalMinutes = Math.floor(minutes);
+    const hours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
+
+    if (hours > 0) {
+        return `${hours}h ${remainingMinutes}min`;
+    } else {
+        return `${remainingMinutes}min`;
+    }
+}
+
+
+/**
+ * Formats price with proper locale formatting
+ * @param price - Price value to format
+ * @returns Formatted price string
+ */
 export const formatPrice = (price: number): string => {
     return price.toLocaleString('pl-PL', {
-        minimumFractionDigits: 0,
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
 };
 
+/**
+ * Formats phone number with spacing for better readability
+ * @param number - Phone number string to format
+ * @returns Formatted phone number or "No number" if null
+ */
 export const formatPhoneNumber = (number: string | null) => {
     if (!number) return 'Brak numeru';
 
@@ -53,9 +74,23 @@ export const formatPhoneNumber = (number: string | null) => {
     return chunks.join(' ');
 }
 
+/**
+ * Formats date to localized date string
+ * @param date - Date object to format
+ * @returns Formatted date string
+ */
 export const formatDate = (date: Date) =>
     date.toLocaleDateString('pl-PL', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
     });
+
+/**
+ * Formats time string to ensure two-digit hours and minutes
+ * @param timeString
+ */
+export const formatTime = (timeString: string): string => {
+    const [hours, minutes] = timeString.split(':');
+    return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+};
