@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -9,15 +9,17 @@ import { WeeklySchedule } from "@/types/WeeklySchedule";
 import { Booking } from "@/types/Booking";
 import { Schedule } from "@/types/Schedule";
 
+// Polish day names mapping for consistent translation
 const DAYS_PL = {
     MONDAY: 'Poniedziałek',
     TUESDAY: 'Wtorek',
     WEDNESDAY: 'Środa',
     THURSDAY: 'Czwartek',
     FRIDAY: 'Piątek',
-};
+} as const;
 
-const DAYS_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+// Day order for consistent display
+const DAYS_ORDER = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] as const;
 
 interface ScheduleTabProps {
     weeklySchedule: WeeklySchedule | null;
@@ -26,74 +28,193 @@ interface ScheduleTabProps {
     onClassPress: (classItem: Schedule) => void;
 }
 
+/**
+ * Helper function to format time strings safely
+ * @param timeString - Time in HH:mm format
+ * @returns Formatted time string
+ */
 const formatTime = (timeString: string): string => {
-    const [hours, minutes] = timeString.split(':');
-    return `${hours}:${minutes}`;
+    try {
+        const [hours, minutes] = timeString.split(':');
+        if (!hours || !minutes) {
+            return '';
+        }
+        return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+    } catch {
+        console.warn('Invalid time format:', timeString);
+        return timeString;
+    }
 };
 
-export default function ScheduleTab({ weeklySchedule, userBookings, isClassInPast, onClassPress }: ScheduleTabProps) {
-    const isClassBooked = (classId: string): boolean => {
+/**
+ * ScheduleTab Component
+ *
+ * Displays weekly class schedule organized by days.
+ * Features:
+ * - Shows classes for each day of the week
+ * - Indicates booked classes with visual markers
+ * - Disables past classes
+ * - Shows capacity information with color-coded indicators
+ * - Handles empty states for days without classes
+ */
+export default function ScheduleTab({
+    weeklySchedule,
+    userBookings,
+    isClassInPast,
+    onClassPress
+}: ScheduleTabProps) {
+
+    /**
+     * Memoized function to check if a class is booked by the user
+     */
+    const isClassBooked = useCallback((classId: string): boolean => {
         return userBookings.some(
             booking => booking.schedule.id === classId && booking.yearWeek === weeklySchedule?.yearWeek
         );
+    }, [userBookings, weeklySchedule?.yearWeek]);
+
+    /**
+     * Memoized classes organized by day to prevent unnecessary recalculations
+     */
+    const classesByDay = useMemo(() => {
+        if (!weeklySchedule?.schedules) return {};
+
+        return weeklySchedule.schedules.reduce((acc, schedule) => {
+            if (!acc[schedule.dayOfWeek]) {
+                acc[schedule.dayOfWeek] = [];
+            }
+            acc[schedule.dayOfWeek].push(schedule);
+            return acc;
+        }, {} as Record<string, Schedule[]>);
+    }, [weeklySchedule?.schedules]);
+
+    /**
+     * Get capacity indicator color based on available spots
+     */
+    const getCapacityIndicatorStyle = (availableSpots: number, maxCapacity: number) => {
+        const percentage = (availableSpots / maxCapacity) * 100;
+
+        if (availableSpots === 0) return styles.fullCapacity;
+        if (percentage <= 20) return styles.lowCapacity;
+        return styles.goodCapacity;
     };
 
+    /**
+     * Render a single day's schedule
+     */
     const renderScheduleDay = (day: string) => {
-        const classes = weeklySchedule?.schedules.filter(s => s.dayOfWeek === day) || [];
+        const classes = classesByDay[day] || [];
+        const dayName = DAYS_PL[day as keyof typeof DAYS_PL] || day;
+
         return (
             <View key={day} style={styles.dayContainer}>
+                {/* Day header with title and underline */}
                 <View style={styles.dayTitleContainer}>
-                    <Text style={styles.dayTitle}>{DAYS_PL[day as keyof typeof DAYS_PL]}</Text>
+                    <Text style={styles.dayTitle}>{dayName}</Text>
                     <View style={styles.dayTitleUnderline} />
                 </View>
+
                 {classes.length === 0 ? (
+                    // Empty state when no classes scheduled for this day
                     <View style={styles.noClassesContainer}>
                         <Text style={styles.noClassesText}>Brak zajęć</Text>
                     </View>
                 ) : (
-                    classes.map((classItem) => (
-                        <TouchableOpacity
-                            key={classItem.id}
-                            style={[
-                                styles.classCard,
-                                isClassBooked(classItem.id) && styles.bookedClassCard,
-                                isClassInPast(classItem, weeklySchedule?.yearWeek) && styles.pastClassCard
-                            ]}
-                            onPress={() => onClassPress(classItem)}
-                            activeOpacity={0.7}
-                            disabled={isClassInPast(classItem, weeklySchedule?.yearWeek)}
-                        >
-                            <View style={styles.classContent}>
-                                <View style={styles.classHeader}>
-                                    <Text style={styles.className}>{classItem.name}</Text>
-                                    {isClassBooked(classItem.id) && (
-                                        <View style={styles.bookedBadge}>
-                                            <Text style={styles.bookedBadgeText}>✓</Text>
+                    // Render classes for this day
+                    classes
+                        .sort((a, b) => a.startTime.localeCompare(b.startTime)) // Sort by start time
+                        .map((classItem) => {
+                            const isBooked = isClassBooked(classItem.id);
+                            const isPast = isClassInPast(classItem, weeklySchedule?.yearWeek);
+                            const isFull = classItem.availableSpots <= 0;
+
+                            return (
+                                <TouchableOpacity
+                                    key={classItem.id}
+                                    style={[
+                                        styles.classCard,
+                                        isBooked && styles.bookedClassCard,
+                                        isPast && styles.pastClassCard
+                                    ]}
+                                    onPress={() => onClassPress(classItem)}
+                                    activeOpacity={0.7}
+                                    disabled={isPast}
+                                    accessibilityLabel={`${classItem.name} o ${formatTime(classItem.startTime)}, ${classItem.availableSpots} wolnych miejsc z ${classItem.maxCapacity}`}
+                                    accessibilityState={{
+                                        disabled: isPast,
+                                        selected: isBooked
+                                    }}
+                                >
+                                    <View style={styles.classContent}>
+                                        {/* Class header with name and booking indicator */}
+                                        <View style={styles.classHeader}>
+                                            <Text style={[
+                                                styles.className,
+                                                isPast && styles.pastClassName
+                                            ]}>
+                                                {classItem.name}
+                                            </Text>
+                                            {isBooked && (
+                                                <View style={styles.bookedBadge}>
+                                                    <Text style={styles.bookedBadgeText}>✓</Text>
+                                                </View>
+                                            )}
                                         </View>
-                                    )}
-                                </View>
-                                <View style={styles.classDetails}>
-                                    <View style={styles.timeContainer}>
-                                        <Text style={styles.classTime}>{formatTime(classItem.startTime)}</Text>
+
+                                        {/* Class details: time and capacity */}
+                                        <View style={styles.classDetails}>
+                                            <View style={styles.timeContainer}>
+                                                <Text style={[
+                                                    styles.classTime,
+                                                    isPast && styles.pastClassTime
+                                                ]}>
+                                                    {formatTime(classItem.startTime)}
+                                                </Text>
+                                            </View>
+
+                                            <View style={styles.capacityContainer}>
+                                                <Text style={[
+                                                    styles.participantsText,
+                                                    isPast && styles.pastParticipantsText
+                                                ]}>
+                                                    {classItem.availableSpots}/{classItem.maxCapacity}
+                                                </Text>
+                                                <View style={[
+                                                    styles.capacityIndicator,
+                                                    getCapacityIndicatorStyle(classItem.availableSpots, classItem.maxCapacity)
+                                                ]} />
+                                            </View>
+                                        </View>
+
+                                        {/* Status indicators */}
+                                        {isFull && !isPast && (
+                                            <View style={styles.fullClassIndicator}>
+                                                <Text style={styles.fullClassText}>ZAPEŁNIONE</Text>
+                                            </View>
+                                        )}
+
+                                        {isPast && (
+                                            <View style={styles.pastClassIndicator}>
+                                                <Text style={styles.pastClassIndicatorText}>ZAKOŃCZONE</Text>
+                                            </View>
+                                        )}
                                     </View>
-                                    <View style={styles.capacityContainer}>
-                                        <Text style={styles.participantsText}>
-                                            {classItem.availableSpots}/{classItem.maxCapacity}
-                                        </Text>
-                                        <View style={[
-                                            styles.capacityIndicator,
-                                            classItem.availableSpots === 0 && styles.fullCapacity,
-                                            classItem.availableSpots <= 2 && classItem.availableSpots > 0 && styles.lowCapacity
-                                        ]} />
-                                    </View>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    ))
+                                </TouchableOpacity>
+                            );
+                        })
                 )}
             </View>
         );
     };
+
+    // Handle case when weekly schedule is not loaded
+    if (!weeklySchedule) {
+        return (
+            <View style={styles.scheduleContent}>
+                <Text style={styles.noScheduleText}>Brak danych harmonogramu</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.scheduleContent}>
@@ -105,6 +226,12 @@ export default function ScheduleTab({ weeklySchedule, userBookings, isClassInPas
 const styles = StyleSheet.create({
     scheduleContent: {
         padding: 16,
+    },
+    noScheduleText: {
+        textAlign: 'center',
+        fontSize: 16,
+        color: '#999',
+        marginTop: 32,
     },
     dayContainer: {
         marginBottom: 24,
@@ -156,10 +283,12 @@ const styles = StyleSheet.create({
     bookedClassCard: {
         borderLeftWidth: 6,
         borderLeftColor: '#FFD700',
+        backgroundColor: '#FFFBF0',
     },
     pastClassCard: {
-        backgroundColor: '#E0E0E0',
-        opacity: 0.6,
+        backgroundColor: '#F5F5F5',
+        opacity: 0.7,
+        borderColor: '#DDD',
     },
     classContent: {
         padding: 16,
@@ -175,6 +304,9 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#000',
         flex: 1,
+    },
+    pastClassName: {
+        color: '#999',
     },
     bookedBadge: {
         backgroundColor: '#FFD700',
@@ -193,6 +325,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: 8,
     },
     timeContainer: {
         backgroundColor: '#F8F8F8',
@@ -205,6 +338,9 @@ const styles = StyleSheet.create({
         color: '#000',
         fontWeight: '600',
     },
+    pastClassTime: {
+        color: '#999',
+    },
     capacityContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -215,10 +351,15 @@ const styles = StyleSheet.create({
         marginRight: 8,
         fontWeight: '500',
     },
+    pastParticipantsText: {
+        color: '#999',
+    },
     capacityIndicator: {
         width: 8,
         height: 8,
         borderRadius: 4,
+    },
+    goodCapacity: {
         backgroundColor: '#4CAF50',
     },
     lowCapacity: {
@@ -226,5 +367,29 @@ const styles = StyleSheet.create({
     },
     fullCapacity: {
         backgroundColor: '#F44336',
+    },
+    fullClassIndicator: {
+        backgroundColor: '#FFEBEE',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        alignSelf: 'flex-start',
+    },
+    fullClassText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#F44336',
+    },
+    pastClassIndicator: {
+        backgroundColor: '#F5F5F5',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        alignSelf: 'flex-start',
+    },
+    pastClassIndicatorText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#999',
     },
 });

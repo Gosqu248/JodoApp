@@ -103,7 +103,7 @@ export default function UserSetupScreen() {
                 birthDate: birthDate.toISOString(),
                 profileImageUri: selectedImage!,
             });
-        } catch (error) {
+        } catch {
             Alert.alert('Błąd', 'Nie udało się zapisać danych. Spróbuj ponownie.');
         }
     };
@@ -112,7 +112,7 @@ export default function UserSetupScreen() {
         try {
             await logout();
             router.push('/(tabs)');
-        } catch (error) {
+        } catch {
             Alert.alert('Błąd', 'Nie udało się wylogować.');
         }
     };
@@ -189,7 +189,7 @@ export default function UserSetupScreen() {
                                 onPress={() => setShowDatePicker(!showDatePicker)}
                             >
                                 <Text style={styles.dateText}>
-                                    {formatDate(birthDate)}
+                                    {formatDate(new Date(birthDate))}
                                 </Text>
                                 <Ionicons name="calendar-outline" size={20} color="#666"/>
                             </TouchableOpacity>

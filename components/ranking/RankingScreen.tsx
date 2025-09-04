@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
@@ -13,42 +13,67 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import {Exercise} from "@/types/Exercise";
-import {RankingEntry} from "@/types/RankingEntry";
-import {getExercises} from "@/api/rankingEntry";
-import {getRankingEntries} from "@/api/exercise";
-import {RankingDetailsComponent} from "@/components/ranking/RankingDetailsComponent";
+import { Exercise } from "@/types/Exercise";
+import { RankingEntry } from "@/types/RankingEntry";
+import { getExercises } from "@/api/rankingEntry";
+import { getRankingEntries } from "@/api/exercise";
+import { RankingDetailsComponent } from "@/components/ranking/RankingDetailsComponent";
 
+/**
+ * RankingScreen Component
+ *
+ * Main screen for displaying gym exercise rankings.
+ * Features:
+ * - List of available exercises with icons
+ * - Detailed ranking view with top 5 results
+ * - Navigation between exercise list and rankings
+ * - Error handling and loading states
+ * - Responsive design with gradient backgrounds
+ */
 export default function RankingScreen() {
+    // State for exercises and ranking data
     const [exercises, setExercises] = useState<Exercise[]>([]);
-    const [loading, setLoading] = useState(true);
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     const [rankingEntries, setRankingEntries] = useState<RankingEntry[]>([]);
+
+    // Loading states
+    const [loading, setLoading] = useState(true);
     const [rankingLoading, setRankingLoading] = useState(false);
+
     const router = useRouter();
 
+    /**
+     * Load exercises from API on component mount
+     */
     useEffect(() => {
         fetchExercises();
     }, []);
 
-    const fetchExercises = async () => {
+    /**
+     * Fetch all available exercises
+     */
+    const fetchExercises = useCallback(async () => {
         try {
             setLoading(true);
-            const exercises = await getExercises();
-            setExercises(exercises);
+            const exercisesData = await getExercises();
+            setExercises(exercisesData);
         } catch (error) {
             console.error('Error fetching exercises:', error);
             Alert.alert('Błąd', 'Wystąpił błąd podczas pobierania danych');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchRankingEntries = async (exerciseId: string) => {
+    /**
+     * Fetch ranking entries for a specific exercise
+     * @param exerciseId - ID of the exercise to get rankings for
+     */
+    const fetchRankingEntries = useCallback(async (exerciseId: string) => {
         try {
             setRankingLoading(true);
-            const rankingEntries = await getRankingEntries(exerciseId);
-            setRankingEntries(rankingEntries);
+            const rankingData = await getRankingEntries(exerciseId);
+            setRankingEntries(rankingData);
         } catch (error) {
             console.error('Error fetching ranking entries:', error);
             Alert.alert('Błąd', 'Wystąpił błąd podczas pobierania rankingu');
@@ -56,32 +81,50 @@ export default function RankingScreen() {
         } finally {
             setRankingLoading(false);
         }
-    };
+    }, []);
 
-    const handleExercisePress = (exercise: Exercise) => {
+    /**
+     * Handle exercise selection and load its ranking
+     * @param exercise - Selected exercise object
+     */
+    const handleExercisePress = useCallback((exercise: Exercise) => {
         setSelectedExercise(exercise);
         fetchRankingEntries(exercise.id);
-    };
+    }, [fetchRankingEntries]);
 
-    const getExerciseIcon = (iconRN: string | null | undefined): keyof typeof Ionicons.glyphMap => {
+    /**
+     * Get appropriate icon for exercise, with fallback
+     * @param iconRN - Icon name from exercise data
+     * @returns Valid Ionicon name
+     */
+    const getExerciseIcon = useCallback((iconRN: string | null | undefined): keyof typeof Ionicons.glyphMap => {
         if (!iconRN) return 'fitness-outline';
 
+        // Check if the icon exists in Ionicons
         if (iconRN in Ionicons.glyphMap) {
             return iconRN as keyof typeof Ionicons.glyphMap;
         }
 
+        // Fallback icon
         return 'fitness-outline';
-    };
+    }, []);
 
-    const handleBackPress = () => {
+    /**
+     * Handle back navigation
+     * Goes back to exercise list or exits screen
+     */
+    const handleBackPress = useCallback(() => {
         if (selectedExercise) {
+            // Return to exercise list
             setSelectedExercise(null);
             setRankingEntries([]);
         } else {
+            // Exit to previous screen
             router.back();
         }
-    };
+    }, [selectedExercise, router]);
 
+    // Show loading indicator while fetching exercises
     if (loading) {
         return (
             <View style={styles.container}>
@@ -104,6 +147,7 @@ export default function RankingScreen() {
                     contentContainerStyle={styles.scrollContainer}
                     showsVerticalScrollIndicator={false}
                 >
+                    {/* Hero section with gradient background */}
                     <View style={styles.heroSection}>
                         <LinearGradient
                             colors={['#ffd500','#ff9000']}
@@ -121,12 +165,14 @@ export default function RankingScreen() {
                         </LinearGradient>
                     </View>
 
+                    {/* Categories section */}
                     <View style={styles.categoriesSection}>
                         <Text style={styles.sectionTitle}>Kategorie Ćwiczeń</Text>
                         <Text style={styles.sectionSubtitle}>
                             Wybierz ćwiczenie aby zobaczyć TOP 5 wyników
                         </Text>
 
+                        {/* Exercise cards grid */}
                         <View style={styles.exercisesGrid}>
                             {exercises.map((exercise) => (
                                 <TouchableOpacity
@@ -134,8 +180,11 @@ export default function RankingScreen() {
                                     style={styles.exerciseCard}
                                     onPress={() => handleExercisePress(exercise)}
                                     activeOpacity={0.8}
+                                    accessibilityLabel={`Ćwiczenie ${exercise.name}`}
+                                    accessibilityHint="Dotknij aby zobaczyć ranking"
                                 >
                                     <View style={styles.exerciseCardContent}>
+                                        {/* Exercise icon */}
                                         <View style={styles.exerciseIconWrapper}>
                                             <LinearGradient
                                                 colors={['#ffd500','#ff9000']}
@@ -149,6 +198,7 @@ export default function RankingScreen() {
                                             </LinearGradient>
                                         </View>
 
+                                        {/* Exercise information */}
                                         <View style={styles.exerciseInfo}>
                                             <Text style={styles.exerciseName}>
                                                 {exercise.name}
@@ -158,6 +208,7 @@ export default function RankingScreen() {
                                             </Text>
                                         </View>
 
+                                        {/* Arrow indicator */}
                                         <View style={styles.exerciseArrow}>
                                             <Ionicons
                                                 name="chevron-forward"
@@ -174,16 +225,21 @@ export default function RankingScreen() {
             ) : (
                 // Ranking Details View with Back Button
                 <View style={styles.detailsWrapper}>
+                    {/* Back button container */}
                     <View style={styles.backButtonContainer}>
                         <TouchableOpacity
                             style={styles.backButton}
                             onPress={handleBackPress}
+                            activeOpacity={0.7}
+                            accessibilityLabel="Powrót do listy ćwiczeń"
+                            accessibilityHint="Dotknij aby wrócić do listy kategorii"
                         >
                             <Ionicons name="arrow-back" size={24} color="#6366f1" />
                             <Text style={styles.backButtonText}>Powrót do kategorii</Text>
                         </TouchableOpacity>
                     </View>
 
+                    {/* Ranking details component */}
                     <RankingDetailsComponent
                         exercise={selectedExercise}
                         entries={rankingEntries}

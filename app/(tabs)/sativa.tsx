@@ -71,7 +71,7 @@ export default function SativaScreen() {
         } else {
             setLoadingMore(true);
         }
-        
+
         try {
             // Build API parameters with pagination and optional category filter
             const params: any = { page: pageToLoad, size: 10 };
@@ -90,7 +90,11 @@ export default function SativaScreen() {
             );
             setPage(data.pageNumber);
             setTotalPages(data.totalPages);
-        }  finally {
+        } catch (error) {
+            // Handle error appropriately (could add proper error handling)
+            console.error('Error fetching products:', error);
+        } finally {
+            // Reset all loading states
             setLoading(false);
             setLoadingMore(false);
             setRefreshing(false);

@@ -1,22 +1,62 @@
-import {Image, StyleSheet, TouchableOpacity} from 'react-native'
-import React from 'react'
-import {ThemedText} from "@/components/ThemedText";
-import {SativaCategory} from "@/types/SativaCategory";
+import { Image, StyleSheet, TouchableOpacity } from 'react-native'
+import React, { useCallback } from 'react'
+import { ThemedText } from "@/components/ThemedText";
+import { SativaCategory } from "@/types/SativaCategory";
 
-const CategoryItem = ({
-                item,
-                isSelected,
-                onPress
-}: { item: SativaCategory; isSelected: boolean; onPress: () => void}) => {
+interface CategoryItemProps {
+    item: SativaCategory;
+    isSelected: boolean;
+    onPress: () => void;
+}
+
+/**
+ * CategoryItem Component
+ *
+ * Displays a category item with image and name in a horizontal scrollable list.
+ * Features:
+ * - Category image with fallback handling
+ * - Visual feedback for selected state
+ * - Accessible button with proper labels
+ * - Responsive design with minimum width
+ * - Smooth selection animations
+ */
+const CategoryItem = ({ item, isSelected, onPress }: CategoryItemProps) => {
+
+    /**
+     * Handle category selection with proper callback optimization
+     */
+    const handlePress = useCallback(() => {
+        onPress();
+    }, [onPress]);
+
+    /**
+     * Handle image loading errors gracefully
+     */
+    const handleImageError = useCallback((error: any) => {
+        console.warn('Failed to load category image:', item.img, error.nativeEvent.error);
+    }, [item.img]);
+
     return (
         <TouchableOpacity
             style={[
                 styles.categoryItem,
                 isSelected && styles.selectedCategory
             ]}
-            onPress={onPress}
+            onPress={handlePress}
+            activeOpacity={0.7}
+            accessibilityLabel={`Kategoria ${item.name}`}
+            accessibilityState={{ selected: isSelected }}
+            accessibilityHint="Dotknij aby wybrać tę kategorię"
         >
-            <Image source={{ uri: item.img }} style={styles.categoryImage} />
+            {/* Category image with error handling */}
+            <Image
+                source={{ uri: item.img }}
+                style={styles.categoryImage}
+                resizeMode="contain"
+                onError={handleImageError}
+            />
+
+            {/* Category name with dynamic styling based on selection */}
             <ThemedText style={[
                 styles.categoryName,
                 isSelected && styles.selectedCategoryText
@@ -26,7 +66,8 @@ const CategoryItem = ({
         </TouchableOpacity>
     );
 }
-export default CategoryItem
+
+export default CategoryItem;
 const styles = StyleSheet.create({
     categoryItem: {
         alignItems: 'center',

@@ -1,9 +1,10 @@
-import {ActivityIndicator, ScrollView, StyleSheet, Text, View} from 'react-native'
-import React from 'react'
-import {Exercise} from "@/types/Exercise";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback } from 'react'
+import { Exercise } from "@/types/Exercise";
 import { RankingEntry } from '@/types/RankingEntry';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { formatDate } from '@/utils/formatters';
 
 interface RankingDetailsProps {
     exercise: Exercise;
@@ -12,33 +13,47 @@ interface RankingDetailsProps {
     getExerciseIcon: (iconRN: string | null | undefined) => keyof typeof Ionicons.glyphMap;
 }
 
+/**
+ * RankingDetailsComponent
+ *
+ * Displays detailed ranking information for a specific exercise.
+ * Features:
+ * - Exercise header with icon and statistics
+ * - Podium-style ranking with special styling for top 3
+ * - Color-coded ranking entries with gradients
+ * - Empty state when no results exist
+ * - Loading state management
+ */
 export function RankingDetailsComponent({ exercise, entries, loading, getExerciseIcon }: RankingDetailsProps) {
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('pl-PL', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    };
-
-    const getPodiumColors = (position: number) => {
+    /**
+     * Get gradient colors for podium positions
+     * @param position - Array index (0-based)
+     * @returns Array of gradient colors
+     */
+    const getPodiumColors = useCallback((position: number): string[] => {
         switch (position) {
             case 0: return ['#ffd700', '#ffb347']; // Gold
             case 1: return ['#c0c0c0', '#a8a8a8']; // Silver
             case 2: return ['#cd7f32', '#b8860b']; // Bronze
             default: return ['#6366f1', '#8b5cf6']; // Default purple
         }
-    };
+    }, []);
 
-    const getPodiumIcon = (position: number) => {
+    /**
+     * Get appropriate icon for podium positions
+     * @param position - Array index (0-based)
+     * @returns Ionicon name
+     */
+    const getPodiumIcon = useCallback((position: number): keyof typeof Ionicons.glyphMap => {
         switch (position) {
             case 0: return 'trophy';
             case 1: return 'medal';
             case 2: return 'medal';
             default: return 'ribbon';
         }
-    };
+    }, []);
 
+    // Show loading indicator while fetching data
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -60,6 +75,7 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
                     colors={['#ffd500','#ff9000']}
                     style={styles.exerciseHeaderGradient}
                 >
+                    {/* Exercise icon */}
                     <View style={styles.exerciseIconContainer}>
                         <Ionicons
                             name={getExerciseIcon(exercise.iconRN)}
@@ -67,17 +83,21 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
                             color="#ffffff"
                         />
                     </View>
+
+                    {/* Exercise title and subtitle */}
                     <View style={styles.exerciseHeaderText}>
                         <Text style={styles.exerciseHeaderTitle}>{exercise.name}</Text>
                         <Text style={styles.exerciseHeaderSubtitle}>TOP 5 Wyników</Text>
                     </View>
+
+                    {/* Trophy icon */}
                     <View style={styles.trophyIcon}>
                         <Ionicons name="trophy" size={24} color="#ffffff" />
                     </View>
                 </LinearGradient>
             </View>
 
-            {/* Stats Overview */}
+            {/* Stats Overview - only show if entries exist */}
             {entries.length > 0 && (
                 <View style={styles.statsContainer}>
                     <View style={styles.statCard}>
@@ -94,6 +114,7 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
             {/* Ranking Entries */}
             <View style={styles.rankingContainer}>
                 {entries.length === 0 ? (
+                    // Empty state when no results exist
                     <View style={styles.emptyState}>
                         <View style={styles.emptyIconContainer}>
                             <Ionicons name="trophy-outline" size={64} color="#d1d5db" />
@@ -118,7 +139,7 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
                                         index >= 3 && styles.regularEntryGradient
                                     ]}
                                 >
-                                    {/* Position */}
+                                    {/* Position indicator */}
                                     <View style={styles.positionContainer}>
                                         {index < 3 ? (
                                             <View style={[
@@ -138,7 +159,7 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
                                         )}
                                     </View>
 
-                                    {/* User Info */}
+                                    {/* User information */}
                                     <View style={styles.userInfo}>
                                         <Text style={[
                                             styles.username,
@@ -150,11 +171,11 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
                                             styles.resultDate,
                                             index < 3 && styles.podiumDate
                                         ]}>
-                                            {formatDate(entry.createdAt)}
+                                            {formatDate(new Date(entry.createdAt))}
                                         </Text>
                                     </View>
 
-                                    {/* Result */}
+                                    {/* Result display */}
                                     <View style={styles.resultContainer}>
                                         <Text style={[
                                             styles.resultValue,
