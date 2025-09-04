@@ -2,6 +2,7 @@ import { Image, Linking, StyleSheet, TouchableOpacity, View, Alert } from 'react
 import React, { useCallback } from 'react'
 import { ThemedText } from "@/components/ThemedText";
 import { SativaProduct } from "@/types/SativaProduct";
+import { formatPrice } from "@/utils/formatters";
 
 interface SativaItemProps {
     item: SativaProduct;
@@ -42,13 +43,6 @@ const SativaItem = ({ item }: SativaItemProps) => {
         }
     }, [item.productUrl]);
 
-    /**
-     * Format price with proper decimal places and currency
-     */
-    const formatPrice = useCallback((price: number): string => {
-        return `${price.toFixed(2)} zł`;
-    }, []);
-
     return (
         <TouchableOpacity
             style={styles.productItem}
@@ -73,7 +67,7 @@ const SativaItem = ({ item }: SativaItemProps) => {
                     {item.title}
                 </ThemedText>
                 <ThemedText style={styles.productPrice}>
-                    {formatPrice(item.price)}
+                    {formatPrice(item.price)} zł
                 </ThemedText>
             </View>
         </TouchableOpacity>

@@ -51,7 +51,7 @@ export function formatActivityDuration(minutes: number): string {
  */
 export const formatPrice = (price: number): string => {
     return price.toLocaleString('pl-PL', {
-        minimumFractionDigits: 0,
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
 };

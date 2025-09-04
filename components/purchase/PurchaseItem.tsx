@@ -73,7 +73,6 @@ export default function PurchaseItem({ purchase }: PurchaseItemProps) {
 
                     <View style={styles.dateContainer}>
                         <Text style={styles.dateText}>{formatDate(new Date(purchase.purchaseDate))}</Text>
-                        <Text style={styles.timeText}>{formatTime(purchase.purchaseDate)}</Text>
                     </View>
                 </View>
 
