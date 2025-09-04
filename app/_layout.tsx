@@ -15,25 +15,20 @@ function LocationInitializer() {
     const { user } = useAuth();
     const { startTracking } = useLocationTracking(user?.id || null);
     const isInitialized = useRef(false);
-    const initializationTimeout = useRef<NodeJS.Timeout | null>(null);
+    const initializationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-        // Rejestracja powiadomień (tylko raz)
         if (!isInitialized.current) {
             registerForPushNotificationsAsync().catch(console.error);
         }
 
-        // Inicjalizacja śledzenia dla zalogowanego użytkownika
         if (user?.id && !isInitialized.current) {
-            // Czyścimy poprzedni timeout jeśli istnieje
             if (initializationTimeout.current) {
                 clearTimeout(initializationTimeout.current);
             }
 
-            // Opóźnienie dla pewności, że wszystko jest zainicjalizowane
             initializationTimeout.current = setTimeout(() => {
                 if (!isInitialized.current) {
-                    console.log('Inicjalizacja śledzenia lokalizacji dla użytkownika:', user.id);
                     startTracking()
                         .then(() => {
                             isInitialized.current = true;
@@ -46,12 +41,10 @@ function LocationInitializer() {
             }, 1000);
         }
 
-        // Cleanup - resetuj stan gdy użytkownik się wyloguje
         if (!user?.id && isInitialized.current) {
             isInitialized.current = false;
         }
 
-        // Cleanup timeout przy odmontowaniu
         return () => {
             if (initializationTimeout.current) {
                 clearTimeout(initializationTimeout.current);
@@ -69,7 +62,6 @@ export default function RootLayout() {
         SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     });
 
-    // Czekaj na załadowanie fontów
     if (!loaded) {
         return null;
     }

@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+// Configure how notifications are handled when app is in foreground
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowBanner: true,
@@ -10,7 +11,12 @@ Notifications.setNotificationHandler({
     }),
 });
 
+/**
+ * Registers the device for push notifications
+ * @returns Promise<boolean> - true if permission granted, false otherwise
+ */
 export async function registerForPushNotificationsAsync(): Promise<boolean> {
+    // Configure notification channel for Android
     if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
             name: 'default',
@@ -24,6 +30,10 @@ export async function registerForPushNotificationsAsync(): Promise<boolean> {
     return status === 'granted';
 }
 
+/**
+ * Sends a local notification when workout starts
+ * @param startTime - The time when the workout started
+ */
 export async function sendWorkoutStartedNotification(startTime: Date) {
     const timeString = startTime.toLocaleTimeString('pl-PL', {
         hour: '2-digit',

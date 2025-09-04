@@ -2,6 +2,7 @@ import React, {
     createContext,
     useState,
     useEffect,
+    useCallback,
     ReactNode,
     useContext
 } from 'react';
@@ -16,6 +17,9 @@ import {Membership} from "@/types/Membership";
 import {getMembership} from "@/api/membership";
 import {handleApiError} from "@/utils/errorHandler";
 
+/**
+ * Interface defining the shape of user context values
+ */
 interface UserContextValue {
     userInfo: UserInfo | null;
     membership: Membership | null;
@@ -26,6 +30,9 @@ interface UserContextValue {
     updateUserInfo: (params: UpdateUserInfoParams) => Promise<void>;
 }
 
+/**
+ * User context providing user information and membership state
+ */
 const UserContext = createContext<UserContextValue>({
     userInfo: null,
     membership: null,
@@ -40,6 +47,10 @@ interface UserProviderProps {
     children: ReactNode;
 }
 
+/**
+ * User provider component that manages user information and membership state
+ * Handles fetching and updating user data and membership information
+ */
 export const UserProvider = ({ children }: UserProviderProps) => {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [membership, setMembership] = useState<Membership | null>(null);
@@ -47,19 +58,31 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     const [membershipLoading, setMembershipLoading] = useState(true);
     const { user, completeFirstLogin } = useAuth();
 
-    const refreshUserInfo = async () => {
+    /**
+     * Fetches and updates user information from the API
+     * Sets loading state during the operation
+     */
+    const refreshUserInfo = useCallback(async () => {
         setLoading(true);
         if (user) {
             try {
                 const data = await fetchUserInfo();
                 setUserInfo(data);
+            } catch (error) {
+                handleApiError(error);
             } finally {
                 setLoading(false);
             }
+        } else {
+            setLoading(false);
         }
-    };
+    }, [user]);
 
-    const refreshMembership = async () => {
+    /**
+     * Fetches and updates membership information from the API
+     * Sets membership loading state during the operation
+     */
+    const refreshMembership = useCallback(async () => {
         setMembershipLoading(true);
         if (user?.id) {
             try {
@@ -70,10 +93,16 @@ export const UserProvider = ({ children }: UserProviderProps) => {
             } finally {
                 setMembershipLoading(false);
             }
+        } else {
+            setMembershipLoading(false);
         }
-    };
+    }, [user?.id]);
 
-    const updateUserInfo = async (params: UpdateUserInfoParams) => {
+    /**
+     * Updates user information via API and completes first login if applicable
+     * Refreshes local user state with updated data
+     */
+    const updateUserInfo = useCallback(async (params: UpdateUserInfoParams) => {
         setLoading(true);
         try {
             const updated = await apiUpdateUserInfo(params);
@@ -84,18 +113,31 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [completeFirstLogin]);
 
+    /**
+     * Effect hook to handle user data initialization
+     * Fetches user info and membership when user is available and not on first login
+     */
     useEffect(() => {
-        if (!user?.isFirstLogin) {
-            refreshUserInfo();
-            refreshMembership();
-        } else {
-            setUserInfo(null);
-            setMembership(null);
-            setLoading(false);
-        }
-    }, [user]);
+        const initializeUserData = async () => {
+            if (!user?.isFirstLogin) {
+                // Fetch user data in parallel for better performance
+                await Promise.all([
+                    refreshUserInfo(),
+                    refreshMembership()
+                ]);
+            } else {
+                // Clear user data for first-time users
+                setUserInfo(null);
+                setMembership(null);
+                setLoading(false);
+                setMembershipLoading(false);
+            }
+        };
+
+        initializeUserData();
+    }, [user, refreshUserInfo, refreshMembership]);
 
     return (
         <UserContext.Provider
@@ -114,4 +156,8 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     );
 };
 
+/**
+ * Custom hook to access user context
+ * Provides convenient access to user state and methods
+ */
 export const useUser = () => useContext(UserContext);
