@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import {ResetCodeParams, resetPassword, ResetPasswordParams, sendResetPasswordEmail, verifyResetCode} from "@/api/auth";
-import {ErrorResponse} from "@/types/ErrorResponse";
 import {handleApiError} from "@/utils/errorHandler";
 
 interface ResetPasswordScreenProps {

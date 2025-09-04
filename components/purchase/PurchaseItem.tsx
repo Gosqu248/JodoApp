@@ -7,83 +7,80 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MembershipPurchase } from "@/types/MembershipPurchase";
-import { formatDuration, formatPrice } from "@/utils/formatters";
+import { formatDuration, formatPrice, formatDate, formatTime } from "@/utils/formatters";
 
 interface PurchaseItemProps {
     purchase: MembershipPurchase;
 }
 
+/**
+ * PurchaseItem Component
+ *
+ * Displays a single purchase item with formatted date, status, type, and price information.
+ * Features adaptive UI based on purchase type (one-time, gym, or open membership).
+ *
+ * @param purchase - The membership purchase data to display
+ */
 export default function PurchaseItem({ purchase }: PurchaseItemProps) {
 
-    const formatDate = (dateString: string): string => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('pl-PL', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    };
-
-    const formatTime = (dateString: string): string => {
-        const date = new Date(dateString);
-        return date.toLocaleTimeString('pl-PL', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
-    const getStatusColor = (): string => {
-        return '#4CAF50';
-    };
-
+    /**
+     * Determines appropriate icon based on purchase type
+     * @returns Ionicons icon name
+     */
     const getTypeIcon = (): keyof typeof Ionicons.glyphMap => {
         const isOneTime = purchase.durationMonths === 0 && purchase.durationWeeks === 0;
 
         if (isOneTime) {
-            return 'enter';
+            return 'enter'; // One-time entry icon
         } else if (purchase.typeName.toLowerCase().includes('open')) {
-            return 'trophy';
+            return 'trophy'; // Premium/Open membership icon
         } else {
-            return 'fitness';
+            return 'fitness'; // Standard gym membership icon
         }
     };
 
+    /**
+     * Returns gradient colors based on purchase type for visual distinction
+     * @returns Array of gradient color strings
+     */
     const getGradientColors = (): string[] => {
         const isOneTime = purchase.durationMonths === 0 && purchase.durationWeeks === 0;
 
         if (isOneTime) {
-            return ['#4CAF50', '#45a049']; // Green for one-time
+            return ['#4CAF50', '#45a049']; // Green for one-time entries
         } else if (purchase.typeName.toLowerCase().includes('open')) {
-            return ['#ffd500', '#ff9000']; // Gold for OPEN
+            return ['#ffd500', '#ff9000']; // Gold for OPEN memberships
         } else {
-            return ['#2196F3', '#1976D2']; // Blue for gym-only
+            return ['#2196F3', '#1976D2']; // Blue for gym-only memberships
         }
     };
 
     return (
         <View style={styles.container}>
+            {/* Main card with gradient background */}
             <LinearGradient
                 colors={['#ffffff', '#f8f9fa']}
                 style={styles.cardGradient}
             >
-                {/* Header with status and date */}
+                {/* Header section with status and purchase date/time */}
                 <View style={styles.header}>
                     <View style={styles.statusContainer}>
-                        <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
-                        <Text style={[styles.statusText, { color: getStatusColor() }]}>
+                        <View style={[styles.statusDot, { backgroundColor: "#4CAF50" }]} />
+                        <Text style={[styles.statusText, { color: "#4CAF50" }]}>
                             Aktywny
                         </Text>
                     </View>
 
                     <View style={styles.dateContainer}>
-                        <Text style={styles.dateText}>{formatDate(purchase.purchaseDate)}</Text>
+                        <Text style={styles.dateText}>{formatDate(new Date(purchase.purchaseDate))}</Text>
                         <Text style={styles.timeText}>{formatTime(purchase.purchaseDate)}</Text>
                     </View>
                 </View>
 
-                {/* Main content */}
+                {/* Main content section */}
                 <View style={styles.content}>
                     <View style={styles.mainInfo}>
+                        {/* Type icon with gradient background */}
                         <View style={styles.iconContainer}>
                             <LinearGradient
                                 colors={getGradientColors()}
@@ -97,6 +94,7 @@ export default function PurchaseItem({ purchase }: PurchaseItemProps) {
                             </LinearGradient>
                         </View>
 
+                        {/* Purchase type and duration information */}
                         <View style={styles.textContainer}>
                             <Text style={styles.typeName}>{purchase.typeName}</Text>
                             <Text style={styles.duration}>
@@ -104,13 +102,14 @@ export default function PurchaseItem({ purchase }: PurchaseItemProps) {
                             </Text>
                         </View>
 
+                        {/* Price display */}
                         <View style={styles.priceContainer}>
                             <Text style={styles.priceValue}>{formatPrice(purchase.price)}</Text>
                             <Text style={styles.priceCurrency}>zł</Text>
                         </View>
                     </View>
 
-                    {/* Purchase ID */}
+                    {/* Footer with purchase ID */}
                     <View style={styles.footer}>
                         <View style={styles.idContainer}>
                             <Ionicons name="receipt-outline" size={14} color="#999" />

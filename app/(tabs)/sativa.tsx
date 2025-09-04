@@ -36,6 +36,7 @@ export default function SativaScreen() {
     const [loading, setLoading] = useState<boolean>(false);
     const [loadingMore, setLoadingMore] = useState<boolean>(false);
     const [refreshing, setRefreshing] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     /**
      * Fetches available product categories from the API
@@ -43,16 +44,11 @@ export default function SativaScreen() {
      */
     const fetchCategories = useCallback(async () => {
         try {
+            setError(null);
             const { data } = await publicApi.get<SativaCategory[]>('/sativa-categories');
             setCategories(data);
-        } catch (error) {
-            // Handle error appropriately (could add error handling here)
-            console.error('Error fetching categories:', error);
-        } finally {
-            // Reset loading states (note: this might be unnecessary here)
-            setLoading(false);
-            setLoadingMore(false);
-            setRefreshing(false);
+        } catch  {
+            setError('Błąd podczas pobierania kategorii');
         }
     }, []);
 
@@ -60,22 +56,36 @@ export default function SativaScreen() {
      * Fetches products from the API with pagination and optional category filtering
      * @param pageToLoad - The page number to load (0-based)
      * @param categoryId - Optional category ID to filter products
+     * @param isRefresh - Whether this is a refresh operation
      */
-    const fetchProducts = useCallback(async (pageToLoad: number = 0, categoryId?: number) => {
-        // Prevent loading if we've reached the last page
-        if (pageToLoad > totalPages - 1) return;
-
-        // Set appropriate loading state based on whether it's initial load or pagination
-        if (pageToLoad === 0) {
-            setLoading(true);
-        } else {
-            setLoadingMore(true);
+    const fetchProducts = useCallback(async (
+        pageToLoad: number = 0,
+        categoryId?: number | null,
+        isRefresh: boolean = false
+    ) => {
+        // Prevent loading if we've reached the last page (unless it's a refresh or first page)
+        if (pageToLoad > 0 && pageToLoad >= totalPages && !isRefresh) {
+            return;
         }
 
         try {
+            setError(null);
+
+            // Set appropriate loading state based on whether it's initial load or pagination
+            if (pageToLoad === 0 || isRefresh) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
+
             // Build API parameters with pagination and optional category filter
-            const params: any = { page: pageToLoad, size: 10 };
-            if (categoryId) {
+            const params: Record<string, any> = {
+                page: pageToLoad,
+                size: 10
+            };
+
+            // Only add categoryId if it's not null
+            if (categoryId !== null && categoryId !== undefined) {
                 params.categoryId = categoryId;
             }
 
@@ -85,14 +95,17 @@ export default function SativaScreen() {
             });
 
             // Update products state - replace for first page, append for subsequent pages
-            setProducts(prev =>
-                pageToLoad === 0 ? data.content : [...prev, ...data.content]
-            );
+            if (pageToLoad === 0 || isRefresh) {
+                setProducts(data.content);
+            } else {
+                setProducts(prev => [...prev, ...data.content]);
+            }
+
             setPage(data.pageNumber);
             setTotalPages(data.totalPages);
-        } catch (error) {
-            // Handle error appropriately (could add proper error handling)
-            console.error('Error fetching products:', error);
+
+        } catch {
+            setError('Błąd podczas pobierania produktów');
         } finally {
             // Reset all loading states
             setLoading(false);
@@ -105,7 +118,7 @@ export default function SativaScreen() {
     useEffect(() => {
         fetchCategories();
         fetchProducts(0);
-    }, [fetchCategories, fetchProducts]);
+    }, [fetchCategories]);
 
     /**
      * Handles pull-to-refresh functionality
@@ -114,7 +127,8 @@ export default function SativaScreen() {
     const onRefresh = useCallback(() => {
         setRefreshing(true);
         setPage(0);
-        fetchProducts(0, selectedCategory || undefined);
+        setTotalPages(1); // Reset totalPages to allow refresh
+        fetchProducts(0, selectedCategory, true);
     }, [selectedCategory, fetchProducts]);
 
     /**
@@ -122,10 +136,10 @@ export default function SativaScreen() {
      * Called when user reaches the end of the product list
      */
     const loadMore = useCallback(() => {
-        if (!loadingMore && page < totalPages - 1) {
-            fetchProducts(page + 1, selectedCategory || undefined);
+        if (!loadingMore && !loading && page + 1 < totalPages) {
+            fetchProducts(page + 1, selectedCategory);
         }
-    }, [loadingMore, page, totalPages, selectedCategory, fetchProducts]);
+    }, [loadingMore, loading, page, totalPages, selectedCategory, fetchProducts]);
 
     /**
      * Handles category selection and filtering
@@ -133,16 +147,19 @@ export default function SativaScreen() {
      * @param categoryId - The ID of the category to filter by
      */
     const onCategoryPress = useCallback((categoryId: number) => {
+
         if (selectedCategory === categoryId) {
             // Deselect category and show all products
             setSelectedCategory(null);
             setPage(0);
-            fetchProducts(0);
+            setTotalPages(1); // Reset to allow new fetch
+            fetchProducts(0, null, true);
         } else {
             // Select new category and filter products
             setSelectedCategory(categoryId);
             setPage(0);
-            fetchProducts(0, categoryId);
+            setTotalPages(1); // Reset to allow new fetch
+            fetchProducts(0, categoryId, true);
         }
     }, [selectedCategory, fetchProducts]);
 
@@ -180,12 +197,45 @@ export default function SativaScreen() {
         );
     };
 
-    // Show loading spinner for initial load
-    if (loading && page === 0) {
+    /**
+     * Renders error message when there's an error
+     */
+    const renderError = () => {
+        if (!error) return null;
         return (
-            <View style={styles.loader}>
-                <ActivityIndicator size="large" color="#ffb300" />
+            <View style={styles.errorContainer}>
+                <ThemedText style={styles.errorText}>{error}</ThemedText>
             </View>
+        );
+    };
+
+    /**
+     * Renders empty state when no products are found
+     */
+    const renderEmptyState = () => {
+        if (loading) return null;
+        return (
+            <View style={styles.emptyContainer}>
+                <ThemedText style={styles.emptyText}>
+                    {selectedCategory
+                        ? 'Brak produktów w tej kategorii'
+                        : 'Brak dostępnych produktów'
+                    }
+                </ThemedText>
+            </View>
+        );
+    };
+
+    // Show loading spinner for initial load
+    if (loading && products.length === 0) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
+                <View style={styles.loader}>
+                    <ActivityIndicator size="large" color="#ffb300" />
+                    <ThemedText style={styles.loadingText}>Ładowanie produktów...</ThemedText>
+                </View>
+            </SafeAreaView>
         );
     }
 
@@ -205,6 +255,9 @@ export default function SativaScreen() {
                 </ThemedText>
             </View>
 
+            {/* Error display */}
+            {renderError()}
+
             {/* Categories section with horizontal scrollable list */}
             <View style={styles.categoriesSection}>
                 <ThemedText style={styles.sectionTitle}>Kategorie</ThemedText>
@@ -222,6 +275,9 @@ export default function SativaScreen() {
             <View style={styles.productsSection}>
                 <ThemedText style={styles.sectionTitle}>
                     {selectedCategory ? 'Produkty z kategorii' : 'Wszystkie produkty'}
+                    {products.length > 0 && (
+                        <ThemedText style={styles.productCount}> ({products.length})</ThemedText>
+                    )}
                 </ThemedText>
                 <FlatList
                     data={products}
@@ -229,17 +285,22 @@ export default function SativaScreen() {
                     keyExtractor={item => item.id.toString()}
                     numColumns={2}
                     onEndReached={loadMore}
-                    onEndReachedThreshold={0.5}
+                    onEndReachedThreshold={0.3}
                     ListFooterComponent={renderFooter}
+                    ListEmptyComponent={renderEmptyState}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={onRefresh}
                             colors={['#ffb300']}
+                            tintColor="#ffb300"
                         />
                     }
-                    contentContainerStyle={styles.productsContainer}
-                    columnWrapperStyle={styles.productRow}
+                    contentContainerStyle={[
+                        styles.productsContainer,
+                        products.length === 0 && styles.emptyProductsContainer
+                    ]}
+                    columnWrapperStyle={products.length > 0 ? styles.productRow : undefined}
                 />
             </View>
         </SafeAreaView>
@@ -283,15 +344,17 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         paddingHorizontal: 15,
     },
-
-    // Kategorie
+    productCount: {
+        fontSize: 16,
+        fontWeight: 'normal',
+        color: '#666',
+    },
     categoriesSection: {
         marginBottom: 20,
     },
     categoriesContainer: {
         paddingHorizontal: 10,
     },
-    // Produkty
     productsSection: {
         flex: 1,
     },
@@ -299,18 +362,51 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         paddingBottom: 20,
     },
+    emptyProductsContainer: {
+        flexGrow: 1,
+        justifyContent: 'center',
+    },
     productRow: {
         width: '100%',
         justifyContent: 'space-between',
     },
-    // Inne
     loader: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center'
     },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#666',
+    },
     footer: {
         paddingVertical: 20,
         alignItems: 'center',
+    },
+    errorContainer: {
+        backgroundColor: '#ffebee',
+        padding: 15,
+        marginHorizontal: 15,
+        marginBottom: 15,
+        borderRadius: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#f44336',
+    },
+    errorText: {
+        color: '#c62828',
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 50,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
     },
 });
