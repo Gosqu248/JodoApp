@@ -19,10 +19,11 @@ import {
     StatusBar,
     Linking
 } from 'react-native'
-import React, {useContext, useState} from 'react'
+import React, {useContext, useState, useEffect} from 'react'
 import {AuthContext} from "@/context/AuthContext";
 import {Image} from "expo-image";
 import {LinearGradient} from "expo-linear-gradient";
+import * as SecureStore from 'expo-secure-store';
 import RegisterScreen from './RegisterScreen';
 import ResetPasswordScreen from './ResetPasswordScreen';
 import {handleApiError} from "@/utils/errorHandler";
@@ -42,6 +43,38 @@ export default function LoginScreen() {
     const [isLoading, setIsLoading] = useState(false);
 
     /**
+     * Load saved username on component mount
+     */
+    useEffect(() => {
+        loadSavedUsername();
+    }, []);
+
+    /**
+     * Load saved username from secure storage
+     */
+    const loadSavedUsername = async () => {
+        try {
+            const savedUsername = await SecureStore.getItemAsync('lastUsername');
+            if (savedUsername) {
+                setUsername(savedUsername);
+            }
+        } catch (error) {
+            console.log('Error loading saved username:', error);
+        }
+    };
+
+    /**
+     * Save username to secure storage for future use
+     */
+    const saveUsername = async (username: string) => {
+        try {
+            await SecureStore.setItemAsync('lastUsername', username);
+        } catch (error) {
+            console.log('Error saving username:', error);
+        }
+    };
+
+    /**
      * Handles user login process
      * Validates form fields and calls login function from AuthContext
      */
@@ -55,6 +88,8 @@ export default function LoginScreen() {
         setIsLoading(true);
         try {
             await login(username, password);
+            // Save username for future logins if login is successful
+            await saveUsername(username);
         } catch (error) {
             handleApiError(error);
         } finally {
@@ -124,6 +159,9 @@ export default function LoginScreen() {
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     autoComplete="email"
+                                    autoCorrect={false}
+                                    textContentType="emailAddress"
+                                    returnKeyType="next"
                                 />
                             </View>
 
@@ -136,7 +174,11 @@ export default function LoginScreen() {
                                     secureTextEntry
                                     value={password}
                                     onChangeText={setPassword}
-                                    autoComplete="password"
+                                    autoComplete="current-password"
+                                    textContentType="password"
+                                    autoCorrect={false}
+                                    returnKeyType="done"
+                                    onSubmitEditing={handleLogin}
                                 />
                             </View>
 

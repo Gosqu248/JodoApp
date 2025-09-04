@@ -158,12 +158,12 @@ The app includes sophisticated location tracking capabilities:
 
 ## 🔧 Configuration
 
-### App Configuration (`app.json`)
+### App Configuration (`app.config.js`)
 ```json
 {
   "expo": {
     "name": "JodoGym App",
-    "slug": "JodoGym App",
+    "slug": "JodoGymApp",
     "version": "1.0.0",
     "bundleIdentifier": "com.gosqu.JodoApp",
     "scheme": "jodoapp"
