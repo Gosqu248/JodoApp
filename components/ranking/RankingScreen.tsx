@@ -57,8 +57,7 @@ export default function RankingScreen() {
             setLoading(true);
             const exercisesData = await getExercises();
             setExercises(exercisesData);
-        } catch (error) {
-            console.error('Error fetching exercises:', error);
+        } catch{
             Alert.alert('Błąd', 'Wystąpił błąd podczas pobierania danych');
         } finally {
             setLoading(false);
@@ -74,8 +73,7 @@ export default function RankingScreen() {
             setRankingLoading(true);
             const rankingData = await getRankingEntries(exerciseId);
             setRankingEntries(rankingData);
-        } catch (error) {
-            console.error('Error fetching ranking entries:', error);
+        } catch {
             Alert.alert('Błąd', 'Wystąpił błąd podczas pobierania rankingu');
             setRankingEntries([]);
         } finally {

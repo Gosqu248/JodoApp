@@ -6,7 +6,7 @@ import {
     ScrollView,
     StatusBar,
     ActivityIndicator,
-    Alert, SafeAreaView
+    SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MembershipType } from "@/types/MembershipType";

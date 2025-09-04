@@ -56,8 +56,7 @@ export default function PurchaseScreen() {
             const response = await getPurchasesByMembershipId(membership.id);
             setPurchases(response.content || []);
             setTotal(response.totalElements || 0);
-        } catch (error) {
-            console.error('Error fetching purchases:', error);
+        } catch {
             Alert.alert('Błąd', 'Wystąpił błąd podczas pobierania danych zakupów');
         } finally {
             setLoading(false);

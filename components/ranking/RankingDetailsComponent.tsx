@@ -1,4 +1,4 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {ActivityIndicator, ColorValue, ScrollView, StyleSheet, Text, View} from 'react-native'
 import React, { useCallback } from 'react'
 import { Exercise } from "@/types/Exercise";
 import { RankingEntry } from '@/types/RankingEntry';
@@ -30,12 +30,12 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
      * @param position - Array index (0-based)
      * @returns Array of gradient colors
      */
-    const getPodiumColors = useCallback((position: number): string[] => {
+    const getPodiumColors = useCallback((position: number): readonly [ColorValue, ColorValue] => {
         switch (position) {
-            case 0: return ['#ffd700', '#ffb347']; // Gold
-            case 1: return ['#c0c0c0', '#a8a8a8']; // Silver
-            case 2: return ['#cd7f32', '#b8860b']; // Bronze
-            default: return ['#6366f1', '#8b5cf6']; // Default purple
+            case 0: return ['#ffd700', '#ffb347'] as const; // Gold
+            case 1: return ['#c0c0c0', '#a8a8a8'] as const; // Silver
+            case 2: return ['#cd7f32', '#b8860b'] as const; // Bronze
+            default: return ['#6366f1', '#8b5cf6'] as const; // Default purple
         }
     }, []);
 
@@ -133,7 +133,7 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
                                 index < 3 && styles.podiumEntry
                             ]}>
                                 <LinearGradient
-                                    colors={index < 3 ? getPodiumColors(index) : ['#ffffff', '#ffffff']}
+                                    colors={index < 3 ? getPodiumColors(index) : ['#ffffff', '#ffffff'] as const}
                                     style={[
                                         styles.rankingGradient,
                                         index >= 3 && styles.regularEntryGradient

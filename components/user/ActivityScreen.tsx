@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -33,6 +33,9 @@ export default function ActivityScreen() {
     const [loadingMore, setLoadingMore] = useState(false);
 
     const { currentActivity, isInGym } = useLocationTracking(user?.id || null);
+
+    // Ref to track previous activity state to prevent unnecessary refreshes
+    const previousActivityRef = useRef(currentActivity);
 
     // Track elapsed time for current activity
     const [elapsedMinutes, setElapsedMinutes] = useState(0);
@@ -122,17 +125,35 @@ export default function ActivityScreen() {
         }, [fetchStats, user?.id])
     );
 
-    // Auto-refresh after activity ends (with debounce)
+    // Handle selectedStats change - reset page and fetch new data
     useEffect(() => {
-        if (user?.id && !currentActivity) {
+        if (user?.id) {
+            setCurrentPage(0);
+            fetchStats(0, true);
+        }
+    }, [selectedStats, user?.id]); // Removed fetchStats from dependencies to prevent infinite loop
+
+    // Auto-refresh after activity ends (with debounce) - only when activity actually changes
+    useEffect(() => {
+        const previousActivity = previousActivityRef.current;
+
+        // Only refresh if activity actually ended (was active, now inactive)
+        if (user?.id && previousActivity && !currentActivity) {
             const timer = setTimeout(() => {
                 fetchOnGymCount();
                 setCurrentPage(0);
                 fetchStats(0, true);
             }, 1000);
+
+            // Update ref after setting timer
+            previousActivityRef.current = currentActivity;
+
             return () => clearTimeout(timer);
         }
-    }, [currentActivity, user?.id, fetchStats]);
+
+        // Always update the ref
+        previousActivityRef.current = currentActivity;
+    }, [currentActivity, user?.id]);
 
     // Fetch current gym occupancy count
     const fetchOnGymCount = async () => {
@@ -160,6 +181,13 @@ export default function ActivityScreen() {
             setCurrentPage(nextPage);
             fetchStats(nextPage, false);
         }
+    };
+
+    // Handle stats type selection
+    const handleStatsTypeChange = (statsType: StatsType) => {
+        setSelectedStats(statsType);
+        // Reset page when changing stats type - fetchStats will be called by useEffect
+        setCurrentPage(0);
     };
 
     // Utility functions for date calculations
@@ -282,7 +310,7 @@ export default function ActivityScreen() {
                                 styles.periodButton,
                                 selectedStats === period && styles.periodButtonActive
                             ]}
-                            onPress={() => setSelectedStats(period)}
+                            onPress={() => handleStatsTypeChange(period)}
                         >
                             <Text
                                 style={[

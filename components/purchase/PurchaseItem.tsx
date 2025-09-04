@@ -2,7 +2,7 @@ import React from 'react';
 import {
     View,
     Text,
-    StyleSheet,
+    StyleSheet, ColorValue,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -43,7 +43,7 @@ export default function PurchaseItem({ purchase }: PurchaseItemProps) {
      * Returns gradient colors based on purchase type for visual distinction
      * @returns Array of gradient color strings
      */
-    const getGradientColors = (): string[] => {
+    const getGradientColors = (): readonly [ColorValue, ColorValue]  => {
         const isOneTime = purchase.durationMonths === 0 && purchase.durationWeeks === 0;
 
         if (isOneTime) {

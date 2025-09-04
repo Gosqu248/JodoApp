@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "JodoApp",
-    "slug": "JodoApp",
+    "name": "JodoGym App",
+    "slug": "JodoGym App",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

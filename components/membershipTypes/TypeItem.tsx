@@ -3,7 +3,7 @@ import {
     View,
     Text,
     TouchableOpacity,
-    StyleSheet,
+    StyleSheet, ColorValue,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,16 +52,16 @@ export default function TypeItem({ membershipType }: TypeItemProps) {
      * Returns gradient colors based on membership type for visual distinction
      * @returns Array of gradient color strings
      */
-    const getGradientColors = (): string[] => {
+    const getGradientColors = (): readonly [ColorValue, ColorValue] => {
         const isOneTime = (!membershipType.durationMonths || membershipType.durationMonths === 0) &&
             (!membershipType.durationWeeks || membershipType.durationWeeks === 0);
 
         if (isOneTime) {
-            return ['#4CAF50', '#45a049']; // Green for one-time entries
+            return ['#4CAF50', '#45a049'] as const; // Green for one-time entries
         } else if (membershipType.withExercises) {
-            return ['#ffd500', '#ff9000']; // Gold for premium OPEN memberships
+            return ['#ffd500', '#ff9000'] as const; // Gold for premium OPEN memberships
         } else {
-            return ['#2196F3', '#1976D2']; // Blue for gym-only memberships
+            return ['#2196F3', '#1976D2'] as const; // Blue for gym-only memberships
         }
     };
 
