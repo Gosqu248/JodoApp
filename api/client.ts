@@ -17,6 +17,7 @@ export const privateApi = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 60000,
 });
 
 export const refreshTokenInternal = async (): Promise<string> => {
@@ -45,6 +46,7 @@ privateApi.interceptors.request.use(async config => {
     if (token) {
         config.headers!['Authorization'] = `Bearer ${token}`;
     }
+
     if (config.data instanceof FormData) {
         delete config.headers!['Content-Type'];
     }
@@ -56,6 +58,7 @@ privateApi.interceptors.response.use(
     resp => resp,
     async error => {
         const original = error.config;
+
         if (error.response?.status === 401 && !original._retry) {
             original._retry = true;
             try {
@@ -63,10 +66,12 @@ privateApi.interceptors.response.use(
                 original.headers['Authorization'] = `Bearer ${newToken}`;
                 return privateApi(original);
             } catch (refreshError) {
+                console.error('Token refresh failed:', refreshError);
                 await logoutInternal();
                 return Promise.reject(refreshError);
             }
         }
+
         return Promise.reject(error);
     }
 );
