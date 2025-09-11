@@ -509,7 +509,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#000',
         marginTop: 8,
-        marginBottom: 4
+        marginBottom: 4,
+        textAlign: 'center',
     },
     statLabel: { fontSize: 14, color: '#666', textAlign: 'center' },
 

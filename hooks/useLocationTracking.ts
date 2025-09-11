@@ -1,156 +1,142 @@
-import {useState, useEffect, useRef, useCallback} from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Alert } from 'react-native';
 import * as Location from 'expo-location';
-import {Alert} from 'react-native';
-import {updateLocation} from '@/api/activity';
-import {LocationResponse} from '@/types/LocationResponse';
+import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {sendWorkoutStartedNotification} from "@/utils/notifications";
 
-// ================== CONSTANTS ==================
-const LOCATION_UPDATE_INTERVAL = 60000; // 1 min
-const STORAGE_KEYS = {
-    USER_ID: 'user_id_for_location',
-} as const;
+import { updateLocation } from '@/api/activity';
+import { sendWorkoutStartedNotification } from '@/utils/notifications';
+import type { LocationResponse } from '@/types/LocationResponse';
+import {LocationRequest} from "@/types/LocationRequest";
 
-const LOCATION_CONFIG = {
+const BACKGROUND_TASK_NAME = 'JODO_LOCATION_UPDATES';
+const LOCATION_UPDATE_INTERVAL = 60_000;
+const STORAGE_KEYS = { USER_ID: 'user_id_for_location' } as const;
+
+const LOCATION_CONFIG = { accuracy: Location.Accuracy.High } as const;
+
+const BG_OPTIONS: Location.LocationTaskOptions = {
     accuracy: Location.Accuracy.High,
+    activityType: Location.ActivityType.Fitness,
+    pausesUpdatesAutomatically: false,
+    showsBackgroundLocationIndicator: true,
+    distanceInterval: 8,
+    timeInterval: LOCATION_UPDATE_INTERVAL,
+    foregroundService: {
+        notificationTitle: 'JodoGym',
+        notificationBody: 'Śledzenie lokalizacji włączone.',
+    },
 };
 
-// ================== INTERFACES ==================
+TaskManager.defineTask(BACKGROUND_TASK_NAME, async ({ data, error }) => {
+    try {
+        if (error) { console.log('BG task error:', error); return; }
+        const { locations } = (data ?? {}) as { locations?: Location.LocationObject[] };
+        if (!locations?.length) return;
+
+        const last = locations[locations.length - 1];
+        const userId = await AsyncStorage.getItem(STORAGE_KEYS.USER_ID);
+        if (!userId) { console.log('BG: brak userId – pomijam'); return; }
+
+        const request: LocationRequest = {
+            latitude: last.coords.latitude,
+            longitude: last.coords.longitude,
+        }
+
+        const resp: LocationResponse = await updateLocation(userId, request);
+
+        if (resp.isInGym && resp.currentSessionMinutes === 0 && resp.startTime) {
+            await sendWorkoutStartedNotification(resp.startTime);
+        }
+    } catch (e) {
+        console.log('BG task failed:', e);
+    }
+});
+
 interface LocationTrackingState {
     isInGym: boolean;
-    sessionDetails: {
-        startTime: string | null;
-        currentSessionMinutes: number | null;
-    };
+    sessionDetails: { startTime: string | null; currentSessionMinutes: number | null };
     isTracking: boolean;
     startTracking: () => Promise<void>;
     stopTracking: () => Promise<void>;
 }
 
-// ================== MAIN HOOK ==================
 export function useLocationTracking(userId: string | null): LocationTrackingState {
     const [isInGym, setIsInGym] = useState(false);
-    const [sessionDetails, setSessionDetails] = useState<{
-        startTime: string | null;
-        currentSessionMinutes: number | null;
-    }>({startTime: null, currentSessionMinutes: null});
+    const [sessionDetails, setSessionDetails] = useState<{ startTime: string | null; currentSessionMinutes: number | null; }>({ startTime: null, currentSessionMinutes: null });
     const [isTracking, setIsTracking] = useState(false);
 
-    const locationSubscription = useRef<Location.LocationSubscription | null>(null);
     const trackingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    /**
-     * Save user ID in AsyncStorage
-     */
     useEffect(() => {
-        if (userId) {
-            void AsyncStorage.setItem(STORAGE_KEYS.USER_ID, userId);
-        } else {
-            void AsyncStorage.removeItem(STORAGE_KEYS.USER_ID);
-        }
+        if (userId) { void AsyncStorage.setItem(STORAGE_KEYS.USER_ID, userId); }
+        else { void AsyncStorage.removeItem(STORAGE_KEYS.USER_ID); }
     }, [userId]);
 
-    /**
-     * Function sending location to the backend
-     */
     const sendLocationUpdate = useCallback(async () => {
-        if (!userId) {
-            console.log('No userId, stopping location updates.');
-            return;
-        }
-
+        if (!userId) { console.log('Brak userId – przerywam'); return; }
         try {
-            const location = await Location.getCurrentPositionAsync(LOCATION_CONFIG);
-            const {latitude, longitude} = location.coords;
-
-            const response: LocationResponse = await updateLocation(userId, {latitude, longitude});
-
-            console.log('Server response:', response);
-
-            setIsInGym(response.isInGym);
-            setSessionDetails({
-                startTime: response.startTime,
-                currentSessionMinutes: response.currentSessionMinutes,
+            const loc = await Location.getCurrentPositionAsync(LOCATION_CONFIG);
+            const resp: LocationResponse = await updateLocation(userId, {
+                latitude: loc.coords.latitude,
+                longitude: loc.coords.longitude,
             });
-
-            if (response.isInGym && response.currentSessionMinutes === 0 && response.startTime) {
-                await sendWorkoutStartedNotification(response.startTime)
+            setIsInGym(resp.isInGym);
+            setSessionDetails({ startTime: resp.startTime, currentSessionMinutes: resp.currentSessionMinutes });
+            if (resp.isInGym && resp.currentSessionMinutes === 0 && resp.startTime) {
+                await sendWorkoutStartedNotification(resp.startTime);
             }
-
-        } catch (error) {
-            console.log('Error sending location:', error);
+        } catch (e) {
+            console.log('Błąd wysyłki lokalizacji:', e);
         }
     }, [userId]);
 
-    /**
-     * Start location tracking
-     */
     const startTracking = useCallback(async () => {
-        if (!userId || isTracking) {
-            console.log('Tracking already active or no user ID.');
+        if (!userId || isTracking) { console.log('Tracking już działa lub brak userId'); return; }
+
+        const fg = await Location.requestForegroundPermissionsAsync();
+        if (fg.status !== 'granted') {
+            Alert.alert('Błąd', 'Aplikacja wymaga dostępu do lokalizacji.');
             return;
         }
+        const bg = await Location.requestBackgroundPermissionsAsync();
+        if (bg.status !== 'granted') {
+            Alert.alert('Wymagane uprawnienie', 'Włącz „Zawsze” dla lokalizacji, aby śledzenie działało w tle.');
+        }
 
-        try {
-            const {status} = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                Alert.alert('Error', 'The app requires location access to work properly.');
-                return;
-            }
-
-            setIsTracking(true);
-            await sendLocationUpdate(); // Send location immediately after starting
-
-            // Set interval for sending location
+        setIsTracking(true);
+        await sendLocationUpdate();
+        if (!trackingInterval.current) {
             trackingInterval.current = setInterval(sendLocationUpdate, LOCATION_UPDATE_INTERVAL);
-            console.log('Location tracking started.');
+        }
 
-        } catch (error) {
-            console.error('Failed to start tracking:', error);
-            Alert.alert('Error', 'Could not start location tracking.');
+        const started = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_TASK_NAME);
+        if (!started && bg.status === 'granted') {
+            await Location.startLocationUpdatesAsync(BACKGROUND_TASK_NAME, BG_OPTIONS);
+            console.log('Background location updates started');
         }
     }, [userId, isTracking, sendLocationUpdate]);
 
-    /**
-     * Stop location tracking
-     */
     const stopTracking = useCallback(async () => {
         if (trackingInterval.current) {
             clearInterval(trackingInterval.current);
             trackingInterval.current = null;
         }
-
-        if (locationSubscription.current) {
-            locationSubscription.current.remove();
-            locationSubscription.current = null;
+        const started = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_TASK_NAME);
+        if (started) {
+            await Location.stopLocationUpdatesAsync(BACKGROUND_TASK_NAME);
+            console.log('Background location updates stopped');
         }
-
         setIsTracking(false);
         setIsInGym(false);
-        setSessionDetails({startTime: null, currentSessionMinutes: null});
-        console.log('Location tracking stopped.');
+        setSessionDetails({ startTime: null, currentSessionMinutes: null });
     }, []);
 
-    /**
-     * Cleanup on component unmount
-     */
     useEffect(() => {
         return () => {
-            if (trackingInterval.current) {
-                clearInterval(trackingInterval.current);
-            }
-            if (locationSubscription.current) {
-                locationSubscription.current.remove();
-            }
+            if (trackingInterval.current) clearInterval(trackingInterval.current);
         };
     }, []);
 
-    return {
-        isInGym,
-        sessionDetails,
-        isTracking,
-        startTracking,
-        stopTracking,
-    };
+    return { isInGym, sessionDetails, isTracking, startTracking, stopTracking };
 }
