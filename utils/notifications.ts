@@ -34,8 +34,9 @@ export async function registerForPushNotificationsAsync(): Promise<boolean> {
  * Sends a local notification when workout starts
  * @param startTime - The time when the workout started
  */
-export async function sendWorkoutStartedNotification(startTime: Date) {
-    const timeString = startTime.toLocaleTimeString('pl-PL', {
+export async function sendWorkoutStartedNotification(startTime: string) {
+    const startDate = new Date(startTime);
+    const timeString = startDate.toLocaleTimeString('pl-PL', {
         hour: '2-digit',
         minute: '2-digit',
     });
