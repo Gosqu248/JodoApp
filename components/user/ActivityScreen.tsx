@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     StyleSheet,
     Text,
@@ -32,33 +32,9 @@ export default function ActivityScreen() {
     const [hasMorePages, setHasMorePages] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
 
-    const { currentActivity, isInGym } = useLocationTracking(user?.id || null);
+    const { isInGym, sessionDetails } = useLocationTracking(user?.id || null);
+    const { startTime, currentSessionMinutes } = sessionDetails;
 
-    // Ref to track previous activity state to prevent unnecessary refreshes
-    const previousActivityRef = useRef(currentActivity);
-
-    // Track elapsed time for current activity
-    const [elapsedMinutes, setElapsedMinutes] = useState(0);
-
-    // Update elapsed time every minute for active sessions
-    useEffect(() => {
-        let interval: number;
-        if (currentActivity) {
-            const update = () => {
-                const diffMs = Date.now() - new Date(currentActivity.startTime).getTime();
-                setElapsedMinutes(Math.floor(diffMs / 60000));
-            };
-            update();
-            interval = setInterval(update, 60_000);
-        } else {
-            setElapsedMinutes(0);
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [currentActivity]);
-
-    // Fetch statistics with pagination support
     const fetchStats = useCallback(async (page: number = 0, reset: boolean = false) => {
         if (!user?.id) return;
 
@@ -131,29 +107,8 @@ export default function ActivityScreen() {
             setCurrentPage(0);
             fetchStats(0, true);
         }
-    }, [selectedStats, user?.id]); // Removed fetchStats from dependencies to prevent infinite loop
+    }, [selectedStats, user?.id]);
 
-    // Auto-refresh after activity ends (with debounce) - only when activity actually changes
-    useEffect(() => {
-        const previousActivity = previousActivityRef.current;
-
-        // Only refresh if activity actually ended (was active, now inactive)
-        if (user?.id && previousActivity && !currentActivity) {
-            const timer = setTimeout(() => {
-                fetchOnGymCount();
-                setCurrentPage(0);
-                fetchStats(0, true);
-            }, 1000);
-
-            // Update ref after setting timer
-            previousActivityRef.current = currentActivity;
-
-            return () => clearTimeout(timer);
-        }
-
-        // Always update the ref
-        previousActivityRef.current = currentActivity;
-    }, [currentActivity, user?.id]);
 
     // Fetch current gym occupancy count
     const fetchOnGymCount = async () => {
@@ -210,18 +165,16 @@ export default function ActivityScreen() {
 
     // Get activity status information for current session
     const getActivityStatusInfo = () => {
-        if (!currentActivity) return null;
+        if (!isInGym) return null;
 
-        if (isInGym) {
-            return {
-                title: 'Trening w toku',
-                icon: 'fitness' as const,
-                color: '#4CAF50',
-                statusText: 'W siłowni',
-                statusColor: '#4CAF50',
-                statusIcon: 'location' as const
-            };
-        }
+        return {
+            title: 'Trening w toku',
+            icon: 'fitness' as const,
+            color: '#4CAF50',
+            statusText: 'W siłowni',
+            statusColor: '#4CAF50',
+            statusIcon: 'location' as const
+        };
     };
 
     // Show loading spinner while initial data is loading
@@ -259,7 +212,7 @@ export default function ActivityScreen() {
                 </View>
 
                 {/* Current activity card - only shown when user has active session */}
-                {currentActivity && statusInfo && (
+                {isInGym && statusInfo && (
                     <View style={[
                         styles.currentActivityCard,
                         { borderColor: statusInfo.color }
@@ -275,14 +228,14 @@ export default function ActivityScreen() {
                         </View>
                         <View style={styles.currentActivityTime}>
                             <Text style={styles.currentActivityDuration}>
-                                {formatActivityDuration(elapsedMinutes)}
+                                {formatActivityDuration(currentSessionMinutes ?? 0)}
                             </Text>
                             <Text style={styles.currentActivityLabel}>
                                 Rozpoczęto:{' '}
-                                {new Date(currentActivity.startTime).toLocaleTimeString('pl-PL', {
+                                {startTime ? new Date(startTime).toLocaleTimeString('pl-PL', {
                                     hour: '2-digit',
                                     minute: '2-digit'
-                                })}
+                                }) : '...'}
                             </Text>
                         </View>
                         <View style={styles.locationStatus}>
