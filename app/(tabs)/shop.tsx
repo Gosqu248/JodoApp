@@ -266,7 +266,7 @@ export default function ShopScreen() {
                 headerBackgroundColor={{ light: '#ffffff', dark: '#656565' }}
                 headerImage={
                     <ImageBackground
-                        source={require('@/assets/images/shoes.jpg')}
+                        source={require('@/assets/images/shoes.webp')}
                         style={styles.headerImageBackground}
                         imageStyle={styles.headerImage}
                     >

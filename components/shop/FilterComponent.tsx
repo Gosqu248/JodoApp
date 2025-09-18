@@ -5,13 +5,10 @@ import {
     Modal,
     TouchableOpacity,
     ScrollView,
-    Dimensions,
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ProductFilters, FilterState } from '@/types/ProductFilters';
 import { Ionicons } from '@expo/vector-icons';
-
-const { height } = Dimensions.get('window');
 
 interface FilterComponentProps {
     visible: boolean;
@@ -188,7 +185,7 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
-        paddingTop: 50, // Account for status bar
+        paddingTop: 50,
     },
     closeButton: {
         padding: 5,

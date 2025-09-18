@@ -75,18 +75,27 @@ export default function ProductItem({ item }: ProductItemProps) {
                         <ThemedText style={styles.nameText} numberOfLines={2}>
                             {item.name}
                         </ThemedText>
-
-                        <ThemedText style={styles.quantityText}>
-                            Dostępne: {item.quantity} szt.
+                        <ThemedText style={styles.priceText}>
+                            {formatPrice(item.price)} zł
                         </ThemedText>
+                        <View style={styles.discountSection}>
+                            <ThemedText style={styles.regularText}>Cena regularna:</ThemedText>
+                            <ThemedText style={styles.regularPriceText}>
+                                {formatPrice(item.regularPrice)} zł
+                            </ThemedText>
+                            <ThemedText style={styles.discountText}>
+                                -{item.discountPercentage}%
+                            </ThemedText>
+                        </View>
+
                     </View>
 
                     <View style={styles.priceSection}>
                         <ThemedText style={styles.sizeText}>
                             Rozmiar: {item.size}
                         </ThemedText>
-                        <ThemedText style={styles.priceText}>
-                            {formatPrice(item.price)} zł
+                        <ThemedText style={styles.quantityText}>
+                            Dostępne: {item.quantity} szt.
                         </ThemedText>
                     </View>
                 </View>
@@ -201,7 +210,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     priceSection: {
-        justifyContent: 'space-between',
+        gap: 5,
         alignItems: 'flex-end',
         minWidth: 80,
     },
@@ -209,7 +218,28 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#ffb300',
-        textAlign: 'right',
+        textAlign: 'left',
+        marginTop: 4,
+    },
+    discountSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        marginTop: 4,
+    },
+    regularText: {
+        fontSize: 11,
+        color: '#878686',
+    },
+    regularPriceText: {
+        fontSize: 14,
+        color: '#6a6969',
+        textDecorationLine: 'line-through',
+    },
+    discountText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#ff0707',
     },
     sizeText: {
         fontSize: 12,

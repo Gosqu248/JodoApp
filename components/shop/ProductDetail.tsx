@@ -21,7 +21,7 @@ interface ProductDetailProps {
     product: Product;
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function ProductDetail({ visible, onClose, product }: ProductDetailProps) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -189,8 +189,15 @@ export default function ProductDetail({ visible, onClose, product }: ProductDeta
                         </View>
 
                         <View style={styles.priceContainer}>
-                            <ThemedText style={styles.priceLabel}>Cena:</ThemedText>
-                            <ThemedText style={styles.price}>{formatPrice(product.price)} zł</ThemedText>
+                            <View style={styles.discountSection}>
+                                <ThemedText style={styles.priceLabel}>Cena:</ThemedText>
+                                <ThemedText style={styles.price}>{formatPrice(product.price)} zł</ThemedText>
+                            </View>
+                            <View style={styles.discountSection}>
+                                <ThemedText style={styles.regularText}>Cena regularna:</ThemedText>
+                                <ThemedText style={styles.regularPriceText}>{formatPrice(product.regularPrice)} zł</ThemedText>
+                                <ThemedText style={styles.discountText}>-{product.discountPercentage}%</ThemedText>
+                            </View>
                         </View>
 
                         <View style={styles.detailsGrid}>
@@ -326,8 +333,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#f1f1f1',
         position: 'relative',
         marginBottom: 16,
-        justifyContent: 'center', // wyśrodkuj zawartość pionowo
-        alignItems: 'center',     // wyśrodkuj zawartość poziomo
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     mainImage: {
         width: '100%',
@@ -379,13 +386,12 @@ const styles = StyleSheet.create({
     },
     thumbnailGallery: {
         marginBottom: 12,
-        alignSelf: 'center', // upewnij się, że gallery jest wyśrodkowane
+        alignSelf: 'center',
     },
     thumbnailContainer: {
         paddingHorizontal: 4,
-        // ustaw minimalną szerokość na szerokość widocznego obszaru, żeby centrowanie działało
         minWidth: screenWidth - 32,
-        justifyContent: 'center', // wyśrodkuj miniatury gdy jest ich mało
+        justifyContent: 'center',
         alignItems: 'center',
     },
     thumbnail: {
@@ -437,7 +443,7 @@ const styles = StyleSheet.create({
         lineHeight: 28,
     },
     priceContainer: {
-        flexDirection: 'row',
+        flexDirection: 'column',
         alignItems: 'baseline',
         backgroundColor: '#f9f9f9',
         padding: 16,
@@ -445,6 +451,26 @@ const styles = StyleSheet.create({
         borderLeftWidth: 4,
         borderLeftColor: '#ffb300',
         marginBottom: 20,
+    },
+    discountSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        marginTop: 4,
+    },
+    regularText: {
+        fontSize: 11,
+        color: '#878686',
+    },
+    regularPriceText: {
+        fontSize: 14,
+        color: '#6a6969',
+        textDecorationLine: 'line-through',
+    },
+    discountText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#ff0707',
     },
     priceLabel: {
         fontSize: 16,
