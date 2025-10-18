@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Platform, ActionSheetIOS } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 
 export function useImagePicker() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -29,13 +30,16 @@ export function useImagePicker() {
                 mediaTypes: ['images'],
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.5,
+                quality: 0.3, // Zwiększona jakość
+                base64: false, // Wyłączone base64 dla lepszej wydajności
+                exif: false,
             });
 
             if (!result.canceled && result.assets[0]) {
                 await processImage(result.assets[0].uri);
             }
-        } catch {
+        } catch (error) {
+            console.error('Camera error:', error);
             Alert.alert('Błąd', 'Nie udało się zrobić zdjęcia');
         }
     };
@@ -46,27 +50,53 @@ export function useImagePicker() {
                 mediaTypes: ['images'],
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.5,
+                quality: 0.3,
+                base64: false,
+                exif: false,
             });
 
             if (!result.canceled && result.assets[0]) {
                 await processImage(result.assets[0].uri);
             }
-        } catch {
+        } catch (error) {
+            console.error('Gallery error:', error);
             Alert.alert('Błąd', 'Nie udało się wybrać zdjęcia');
         }
     };
 
     const processImage = async (uri: string) => {
         try {
-            setSelectedImage(uri);
-        } catch {
+            if (Platform.OS === 'android') {
+                const fileInfo = await FileSystem.getInfoAsync(uri);
+
+                if (!fileInfo.exists) {
+                    throw new Error('File does not exist');
+                }
+
+                const filename = uri.split('/').pop() || `image_${Date.now()}.jpg`;
+                const newPath = `${FileSystem.cacheDirectory}${filename}`;
+
+                try {
+                    await FileSystem.copyAsync({
+                        from: uri,
+                        to: newPath
+                    });
+                    setSelectedImage(newPath);
+                } catch (copyError) {
+                    setSelectedImage(uri);
+                }
+            } else {
+                setSelectedImage(uri);
+            }
+        } catch (error) {
+            console.error('Process image error:', error);
             Alert.alert('Błąd', 'Nie udało się przetworzyć zdjęcia');
         }
     };
 
     const showImagePicker = async () => {
         const permissions = await requestPermissions();
+
 
         if (Platform.OS === 'ios') {
             ActionSheetIOS.showActionSheetWithOptions(

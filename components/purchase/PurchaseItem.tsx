@@ -7,7 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MembershipPurchase } from "@/types/MembershipPurchase";
-import { formatDuration, formatPrice, formatDate, formatTime } from "@/utils/formatters";
+import { formatDuration, formatPrice, formatDate } from "@/utils/formatters";
 
 interface PurchaseItemProps {
     purchase: MembershipPurchase;

@@ -65,17 +65,15 @@ export default function UserSetupScreen() {
             errors.push('Zdjęcie profilowe jest wymagane');
         }
 
-        // Check if birth date is not in the future
         const today = new Date();
         if (birthDate > today) {
             errors.push('Data urodzenia nie może być w przyszłości');
         }
 
-        // Check if user is at least 13 years old
         const minAge = new Date();
-        minAge.setFullYear(minAge.getFullYear() - 13);
+        minAge.setFullYear(minAge.getFullYear() - 6);
         if (birthDate > minAge) {
-            errors.push('Musisz mieć co najmniej 13 lat');
+            errors.push('Musisz mieć co najmniej 6 lat');
         }
 
         return errors;

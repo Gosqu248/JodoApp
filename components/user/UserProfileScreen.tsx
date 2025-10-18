@@ -5,11 +5,12 @@ import {
     View,
     TouchableOpacity,
     ScrollView,
-    SafeAreaView,
     StatusBar,
     ActivityIndicator,
     Alert,
+    RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/context/UserContext';
@@ -26,7 +27,7 @@ import {ErrorResponse} from "@/types/ErrorResponse";
 
 export default function UserProfileScreen() {
     const { user, logout } = useAuth();
-    const { userInfo, membership, loading: userLoading, membershipLoading } = useUser();
+    const { userInfo, membership, loading: userLoading, membershipLoading, refreshUserInfo, refreshMembership } = useUser();
     const router = useRouter();
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(true);
@@ -35,6 +36,7 @@ export default function UserProfileScreen() {
     const [changePhotoVisible, setChangePhotoVisible] = useState(false);
     const [lastPurchase, setLastPurchase] = useState<MembershipPurchase | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         if (user?.id) {
@@ -100,10 +102,26 @@ export default function UserProfileScreen() {
     const handlePushToRanking = useCallback(() => router.push('/ranking'), [router]);
     const handlePushToMembershipTypes = useCallback(() => router.push('/membershipTypes'), [router]);
 
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await Promise.all([
+                refreshUserInfo(),
+                refreshMembership()
+            ]);
+        } catch (error) {
+            console.error('Error refreshing data:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    }, [refreshUserInfo, refreshMembership]);
+
     if (userLoading || photoLoading || membershipLoading) return <ActivityIndicator />;
     if (!userInfo || !user) return null;
 
     const membershipExpiryDate = membership?.expiryDate ? new Date(membership.expiryDate) : null;
+    const isEntries = membership?.remainingEntries && membership?.remainingEntries > 0;
+
     const currentDate = new Date();
     const isActive = !!membership?.isActive;
     const isFrozen = !!membership?.isFrozen;
@@ -111,12 +129,20 @@ export default function UserProfileScreen() {
         Math.ceil((membershipExpiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={['#ffc500']}
+                        tintColor="#ffc500"
+                    />
+                }
             >
                 {/* Header z awatarem, imieniem i ustawieniami */}
                 <View style={styles.header}>
@@ -160,9 +186,9 @@ export default function UserProfileScreen() {
                         <View style={styles.membershipCard}>
                             <View style={styles.membershipInfo}>
                                 <View>
-                                    <Text style={styles.membershipLabel}>Ważność do:</Text>
+                                    <Text style={styles.membershipLabel}>{isEntries ? 'Ilość wejść' : 'Ważność do'}:</Text>
                                     <Text style={styles.membershipDate}>
-                                        {membershipExpiryDate ? formatDate(membershipExpiryDate) : 'Brak danych'}
+                                        {membershipExpiryDate ? formatDate(membershipExpiryDate) : isEntries ? `${membership.remainingEntries} wejść` : 'Brak danych'}
                                     </Text>
                                 </View>
                                 {isActive && daysLeft > 0 && (
@@ -332,6 +358,7 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        paddingBottom: 20,
         backgroundColor: '#fff'
     },
     scrollContainer: {

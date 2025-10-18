@@ -1,5 +1,9 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const LAST_NOTIFICATION_KEY = 'last_workout_notification';
+const NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minut
 
 // Configure how notifications are handled when app is in foreground
 Notifications.setNotificationHandler({
@@ -34,8 +38,15 @@ export async function registerForPushNotificationsAsync(): Promise<boolean> {
  * Sends a local notification when workout starts
  * @param startTime - The time when the workout started
  */
-export async function sendWorkoutStartedNotification(startTime: Date) {
-    const timeString = startTime.toLocaleTimeString('pl-PL', {
+export async function sendWorkoutStartedNotification(startTime: string) {
+    const now = new Date.now();
+    const last = await AsyncStorage.getItem(LAST_NOTIFICATION_KEY);
+    if (last && now - Number(last) < NOTIFICATION_COOLDOWN_MS) {
+        return;
+    }
+
+    const startDate = new Date(startTime);
+    const timeString = startDate.toLocaleTimeString('pl-PL', {
         hour: '2-digit',
         minute: '2-digit',
     });

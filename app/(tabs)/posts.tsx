@@ -163,6 +163,7 @@ export default function PostsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        marginBottom: 40,
         backgroundColor: '#fff',
     },
     header: {

@@ -1,21 +1,20 @@
 import {publicApi} from "@/api/client";
 import {ActivityStatus} from "@/types/ActivityStatus";
-import {ActivityResponse} from "@/types/ActivityResponse";
+import {LocationRequest} from "@/types/LocationRequest";
+import {LocationResponse} from "@/types/LocationResponse";
 
 export interface PaginationParams {
     page?: number;
     size?: number;
 }
 
-export const startActivity = async (userId: string | null): Promise<ActivityResponse> => {
-    const response = await publicApi.post(`/activities/start/${userId}`);
-    return response.data;
-};
-
-export const endActivity = async (activityId: string): Promise<ActivityResponse> => {
-    const response = await publicApi.post(`/activities/end/${activityId}`);
-    return response.data;
-};
+export const updateLocation = async (
+    userId: string,
+    location: LocationRequest
+): Promise<LocationResponse> => {
+    const response = await publicApi.post(`/activities/location-update/${userId}`, location);
+    return  response.data;
+}
 
 export const getWeeklyStats = async (
     userId: string,

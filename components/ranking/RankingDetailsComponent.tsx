@@ -101,7 +101,7 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
             {entries.length > 0 && (
                 <View style={styles.statsContainer}>
                     <View style={styles.statCard}>
-                        <Text style={styles.statValue}>{entries[0]?.result} kg</Text>
+                        <Text style={styles.statValue}>{entries[0]?.result} {exercise.unit}</Text>
                         <Text style={styles.statLabel}>Najlepszy wynik</Text>
                     </View>
                     <View style={styles.statCard}>
@@ -187,7 +187,7 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
                                             styles.resultUnit,
                                             index < 3 && styles.podiumUnit
                                         ]}>
-                                            kg
+                                            {exercise.unit}
                                         </Text>
                                     </View>
                                 </LinearGradient>

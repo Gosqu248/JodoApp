@@ -18,6 +18,7 @@ import { RankingEntry } from "@/types/RankingEntry";
 import { getExercises } from "@/api/rankingEntry";
 import { getRankingEntries } from "@/api/exercise";
 import { RankingDetailsComponent } from "@/components/ranking/RankingDetailsComponent";
+import {SafeAreaView} from "react-native-safe-area-context";
 
 /**
  * RankingScreen Component
@@ -135,7 +136,7 @@ export default function RankingScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
             {!selectedExercise ? (
@@ -246,7 +247,7 @@ export default function RankingScreen() {
                     />
                 </View>
             )}
-        </View>
+        </SafeAreaView>
     );
 }
 

@@ -108,7 +108,7 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
             if (response.success) {
                 Alert.alert('Sukces', 'Hasło zostało pomyślnie zresetowane.');
                 onBackToLogin();
-           }
+            }
         } catch (error: any) {
             handleApiError(error);
         } finally {
@@ -186,11 +186,11 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
                 <Text style={styles.headerTitle}>Resetowanie hasła</Text>
             </View>
 
-            <KeyboardAvoidingView 
+            <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardAvoidingView}
             >
-                <ScrollView 
+                <ScrollView
                     contentContainerStyle={styles.scrollViewContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -338,12 +338,15 @@ export default function ResetPasswordScreen({ onBackToLogin }: ResetPasswordScre
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        marginBottom: 40,
     },
     keyboardAvoidingView: {
         flex: 1,
     },
     scrollViewContent: {
         flexGrow: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     header: {
         flexDirection: 'row',
@@ -368,7 +371,7 @@ const styles = StyleSheet.create({
         textShadowRadius: 3,
     },
     contentContainer: {
-        flex: 1,
+        width: '100%',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 24,
@@ -377,6 +380,7 @@ const styles = StyleSheet.create({
         width: 150,
         height: 150,
         marginBottom: 20,
+        alignSelf: 'center',
     },
     title: {
         fontSize: 28,
@@ -384,21 +388,27 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         marginBottom: 8,
         textAlign: 'center',
+        width: '100%',
     },
     subtitle: {
         fontSize: 16,
         color: '#f0f0f0',
         marginBottom: 32,
         textAlign: 'center',
+        width: '100%',
+        paddingHorizontal: 20,
     },
     formContainer: {
         width: '100%',
         maxWidth: 400,
+        alignItems: 'center',
     },
     inputContainer: {
+        width: '100%',
         marginBottom: 24,
     },
     input: {
+        width: '100%',
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderRadius: 12,
         padding: 16,
@@ -422,8 +432,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginTop: 4,
         marginLeft: 4,
+        textAlign: 'left',
+        width: '100%',
     },
     passwordRequirements: {
+        width: '100%',
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: 8,
         padding: 12,
@@ -441,6 +454,7 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     resetButton: {
+        width: '100%',
         backgroundColor: '#000000',
         borderRadius: 12,
         padding: 16,

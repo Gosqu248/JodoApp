@@ -4,7 +4,9 @@ import {
     StyleSheet,
     TouchableOpacity,
     ImageSourcePropType,
-    View, ColorValue,
+    View,
+    ColorValue,
+    ScrollView,
 } from 'react-native';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -56,9 +58,17 @@ export default function PostItem({
                                      type = 'OGŁOSZENIE',
                                  }: PostItemProps) {
     const [modalVisible, setModalVisible] = useState(false);
+    const [isScrollable, setIsScrollable] = useState(false);
 
     const openModal = () => setModalVisible(true);
     const closeModal = () => setModalVisible(false);
+
+    /**
+     * Sprawdza czy treść przekracza maksymalną wysokość
+     */
+    const handleContentSizeChange = (contentWidth: number, contentHeight: number) => {
+        setIsScrollable(contentHeight > 250);
+    };
 
     /**
      * Formats the creation date for display
@@ -141,24 +151,44 @@ export default function PostItem({
             {/* Modal for expanded post view */}
             <Modal
                 isVisible={modalVisible}
-                onSwipeComplete={closeModal}
-                swipeDirection={['up', 'down']}
                 onBackdropPress={closeModal}
                 style={{margin: 0}}
+                propagateSwipe={true}
             >
                 <ThemedView style={styles.modalContainer}>
-                        {/* Full-size image in modal */}
-                        {photo && <Image source={photo} style={styles.modalImage} resizeMode={"contain"}/>}
+                    {/* Full-size image in modal */}
+                    {photo && <Image source={photo} style={styles.modalImage} resizeMode={"contain"}/>}
 
-                        {/* Modal content with full title, description, date and close button */}
-                        <View style={styles.infoContainer}>
-                            <ThemedText style={styles.modalTitle}>{title}</ThemedText>
-                            <ThemedText style={styles.modalDescription}>{description}</ThemedText>
-                                <ThemedText style={styles.modalDate}>📅 {dateText}</ThemedText>
-                                <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
-                                    <ThemedText style={styles.closeButtonText}>Zamknij</ThemedText>
-                                </TouchableOpacity>
+                    {/* Modal content with full title, description, date and close button */}
+                    <View style={styles.infoContainer}>
+                        <ThemedText style={styles.modalTitle}>{title}</ThemedText>
+
+                        <View style={styles.scrollContainer}>
+                            <ScrollView
+                                style={styles.descriptionScrollView}
+                                showsVerticalScrollIndicator={isScrollable}
+                                persistentScrollbar={isScrollable}
+                                indicatorStyle="black"
+                                contentContainerStyle={styles.scrollContentContainer}
+                                onContentSizeChange={handleContentSizeChange}
+                                scrollEnabled={isScrollable}
+                            >
+                                <ThemedText style={styles.modalDescription}>{description}</ThemedText>
+                            </ScrollView>
+                            {isScrollable && (
+                                <LinearGradient
+                                    colors={['transparent', 'rgba(0,0,0,0.01)']}
+                                    style={styles.scrollIndicator}
+                                    pointerEvents="none"
+                                />
+                            )}
                         </View>
+
+                        <ThemedText style={styles.modalDate}>📅 {dateText}</ThemedText>
+                        <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                            <ThemedText style={styles.closeButtonText}>Zamknij</ThemedText>
+                        </TouchableOpacity>
+                    </View>
                 </ThemedView>
             </Modal>
         </>
@@ -225,9 +255,30 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     modalImage: {width: '90%', borderRadius: 20, aspectRatio: 1, marginTop: 5},
-    infoContainer: {padding: 20, width: '100%', alignItems: 'center'},
+    infoContainer: {paddingVertical: 5, paddingHorizontal: 20, width: '100%', alignItems: 'center'},
     modalTitle: {fontSize: 24, fontWeight: 'bold', marginTop: 5, textAlign: 'center', marginBottom: 12, color: '#2D3748'},
-    modalDescription: {fontSize: 14, lineHeight: 24, color: '#4A5568', marginBottom: 16},
+    scrollContainer: {
+        width: '100%',
+        maxHeight: 250,
+        position: 'relative',
+        marginBottom: 16,
+    },
+    descriptionScrollView: {
+        width: '100%',
+        paddingRight: 10,
+    },
+    scrollContentContainer: {
+        paddingBottom: 10,
+    },
+    scrollIndicator: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 30,
+        pointerEvents: 'none',
+    },
+    modalDescription: {fontSize: 14, lineHeight: 24, color: '#4A5568'},
     modalDateContainer: {display: "flex", flexDirection: 'row', gap: 10, justifyContent: "center", alignItems: 'center'},
     modalDate: {fontSize: 14, color: '#718096', fontWeight: '500', marginBottom: 10},
     closeButton: {paddingVertical: 10, paddingHorizontal: 50, borderRadius: 20, backgroundColor: '#ffb300'},

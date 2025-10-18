@@ -2,8 +2,8 @@ import 'dotenv/config';
 
 export default {
     expo: {
-        name: "JodoGym App",
-        slug: "JodoGymApp",
+        name: "JodoGym",
+        slug: "JodoApp",
         version: "1.0.0",
         orientation: "portrait",
         icon: "./assets/images/icon.png",

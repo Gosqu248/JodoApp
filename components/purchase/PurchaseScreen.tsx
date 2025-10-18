@@ -7,9 +7,9 @@ import {
     StatusBar,
     ActivityIndicator,
     Alert,
-    SafeAreaView,
     RefreshControl, Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MembershipPurchase } from "@/types/MembershipPurchase";
@@ -94,7 +94,7 @@ export default function PurchaseScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
             <ScrollView

@@ -101,14 +101,14 @@ export default function LoginScreen() {
      * Opens privacy policy link in browser
      */
     const openPrivacyPolicy = () => {
-        Linking.openURL('https://jodogym.com/polityka-prywatnosci');
+        Linking.openURL('https://jodogym.pl/polityka-prywatnosci');
     };
 
     /**
      * Opens terms and conditions link in browser
      */
     const openTerms = () => {
-        Linking.openURL('https://jodogym.com/regulamin');
+        Linking.openURL('https://jodogym.pl/regulamin');
     };
 
     // Render registration screen
@@ -130,11 +130,11 @@ export default function LoginScreen() {
         >
             <StatusBar barStyle="light-content" backgroundColor="#1a1a1a"/>
 
-            <KeyboardAvoidingView 
+            <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={styles.keyboardAvoidingView}
             >
-                <ScrollView 
+                <ScrollView
                     contentContainerStyle={styles.scrollViewContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
