@@ -36,15 +36,14 @@ export default function TypeItem({ membershipType }: TypeItemProps) {
      * @returns Ionicons icon name
      */
     const getTypeIcon = (): keyof typeof Ionicons.glyphMap => {
-        const isOneTime = (!membershipType.durationMonths || membershipType.durationMonths === 0) &&
-            (!membershipType.durationWeeks || membershipType.durationWeeks === 0);
-
-        if (isOneTime) {
-            return 'enter'; // One-time entry icon
+        if (membershipType.entryCount === 1) {
+            return 'enter';
+        } else if (membershipType.entryCount > 1) {
+            return 'stats-chart';
         } else if (membershipType.withExercises) {
-            return 'trophy'; // Premium membership with exercises icon
+            return 'trophy';
         } else {
-            return 'fitness'; // Standard gym-only membership icon
+            return 'fitness';
         }
     };
 
@@ -53,16 +52,16 @@ export default function TypeItem({ membershipType }: TypeItemProps) {
      * @returns Array of gradient color strings
      */
     const getGradientColors = (): readonly [ColorValue, ColorValue] => {
-        const isOneTime = (!membershipType.durationMonths || membershipType.durationMonths === 0) &&
-            (!membershipType.durationWeeks || membershipType.durationWeeks === 0);
-
-        if (isOneTime) {
-            return ['#4CAF50', '#45a049'] as const; // Green for one-time entries
+        if (membershipType.entryCount === 1) {
+            return ['#4CAF50', '#45a049'] as const;
+        } else if (membershipType.entryCount > 1) {
+            return ['#6603fa', '#8c00ff'] as const;
         } else if (membershipType.withExercises) {
-            return ['#ffd500', '#ff9000'] as const; // Gold for premium OPEN memberships
+            return ['#ffd500', '#ff9000'] as const;
         } else {
-            return ['#2196F3', '#1976D2'] as const; // Blue for gym-only memberships
+            return ['#2196F3', '#1976D2'] as const;
         }
+
     };
 
     return (

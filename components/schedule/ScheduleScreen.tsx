@@ -8,10 +8,10 @@ import {
     Modal,
     Alert,
     StyleSheet,
-    SafeAreaView,
     Platform,
     ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import { getCurrentWeekSchedule } from '@/api/schedule';
 import { WeeklySchedule } from "@/types/WeeklySchedule";
@@ -340,7 +340,7 @@ export default function ScheduleScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             {/* Header with week information */}
             <View style={styles.header}>
                 {weeklySchedule && (

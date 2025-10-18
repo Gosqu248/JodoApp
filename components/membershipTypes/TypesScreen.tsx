@@ -6,8 +6,8 @@ import {
     ScrollView,
     StatusBar,
     ActivityIndicator,
-    SafeAreaView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MembershipType } from "@/types/MembershipType";
 import { getActiveMembershipTypes } from "@/api/membership";
@@ -18,6 +18,7 @@ interface GroupedMembershipTypes {
     oneTime: MembershipType[];
     gym: MembershipType[];
     open: MembershipType[];
+    count: MembershipType[];
 }
 
 /**
@@ -28,7 +29,7 @@ interface GroupedMembershipTypes {
  *
  * Key Features:
  * - Fetches and displays active membership types from API
- * - Automatically groups memberships by type (one-time, gym, open)
+ * - Automatically groups memberships by type (one-time, gym, open, count)
  * - Responsive sections with descriptive headers
  * - Loading and error handling with user feedback
  * - Empty state when no memberships are available
@@ -67,15 +68,16 @@ export default function TypesScreen() {
         const grouped: GroupedMembershipTypes = {
             oneTime: [],
             gym: [],
-            open: []
+            open: [],
+            count: []
         };
 
         types.forEach(type => {
-            const isOneTime = (!type.durationMonths || type.durationMonths === 0) &&
-                (!type.durationWeeks || type.durationWeeks === 0);
 
-            if (isOneTime) {
+             if (type.entryCount === 1) {
                 grouped.oneTime.push(type);
+            } else if (type.entryCount > 1) {
+                grouped.count.push(type);
             } else if (type.withExercises) {
                 grouped.open.push(type);
             } else {
@@ -142,7 +144,7 @@ export default function TypesScreen() {
     const groupedTypes = groupMembershipTypes(membershipTypes);
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
             <ScrollView
@@ -172,6 +174,13 @@ export default function TypesScreen() {
                         groupedTypes.open,
                         'trophy-outline',
                         'Pełny dostęp - siłownia + zajęcia grupowe'
+                    )}
+
+                    {renderSection(
+                        'Karnet ilościowy',
+                        groupedTypes.count,
+                        'stats-chart-outline',
+                        'Pełny ilościowy - siłownia + zajęcia grupowe'
                     )}
                 </View>
 

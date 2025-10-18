@@ -4,13 +4,13 @@ import {
     Text,
     View,
     ScrollView,
-    SafeAreaView,
     ActivityIndicator,
     Alert,
     RefreshControl,
     TouchableOpacity,
     Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { ActivityStatus } from '@/types/ActivityStatus';
@@ -189,7 +189,7 @@ export default function ActivityScreen() {
     const statusInfo = getActivityStatusInfo();
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
             <ScrollView
                 contentContainerStyle={styles.scrollContainer}
                 showsVerticalScrollIndicator={false}

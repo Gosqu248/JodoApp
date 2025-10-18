@@ -6,11 +6,11 @@ import {
     RefreshControl,
     FlatList,
     ListRenderItemInfo,
-    SafeAreaView,
     StatusBar,
     TouchableOpacity,
     ImageBackground, Platform,
 } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { publicApi } from '@/api/client';
