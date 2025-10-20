@@ -27,6 +27,7 @@ import * as SecureStore from 'expo-secure-store';
 import RegisterScreen from './RegisterScreen';
 import ResetPasswordScreen from './ResetPasswordScreen';
 import {handleApiError} from "@/utils/errorHandler";
+import {Ionicons} from '@expo/vector-icons';
 
 export default function LoginScreen() {
     // Get login function from AuthContext
@@ -35,6 +36,7 @@ export default function LoginScreen() {
     // Login form state
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     // View management state (login, register, reset)
     const [currentView, setCurrentView] = useState<'login' | 'register' | 'reset'>('login');
@@ -165,21 +167,33 @@ export default function LoginScreen() {
                                 />
                             </View>
 
-                            {/* Password field */}
+                            {/* Password field with toggle */}
                             <View style={styles.inputContainer}>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Hasło"
-                                    placeholderTextColor="#666"
-                                    secureTextEntry
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    autoComplete="current-password"
-                                    textContentType="password"
-                                    autoCorrect={false}
-                                    returnKeyType="done"
-                                    onSubmitEditing={handleLogin}
-                                />
+                                <View style={styles.passwordContainer}>
+                                    <TextInput
+                                        style={styles.passwordInput}
+                                        placeholder="Hasło"
+                                        placeholderTextColor="#666"
+                                        secureTextEntry={!showPassword}
+                                        value={password}
+                                        onChangeText={setPassword}
+                                        autoComplete="current-password"
+                                        textContentType="password"
+                                        autoCorrect={false}
+                                        returnKeyType="done"
+                                        onSubmitEditing={handleLogin}
+                                    />
+                                    <TouchableOpacity
+                                        style={styles.eyeIcon}
+                                        onPress={() => setShowPassword(!showPassword)}
+                                    >
+                                        <Ionicons
+                                            name={showPassword ? "eye-off-outline" : "eye-outline"}
+                                            size={24}
+                                            color="#666"
+                                        />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
 
                             {/* Forgot password link */}
@@ -292,6 +306,29 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 4,
     },
+    passwordContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    passwordInput: {
+        flex: 1,
+        padding: 16,
+        fontSize: 16,
+        color: '#000',
+    },
+    eyeIcon: {
+        padding: 16,
+    },
     forgotPasswordContainer: {
         alignItems: 'flex-end',
         marginBottom: 24,
@@ -353,7 +390,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
-    // Nowe style dla linków prawnych
     legalLinksContainer: {
         flexDirection: 'row',
         justifyContent: 'center',

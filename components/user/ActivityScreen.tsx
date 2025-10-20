@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
+import { useUser } from '@/context/UserContext';
 import { ActivityStatus } from '@/types/ActivityStatus';
 import { getWeeklyStats, getMonthlyStats, getTotalActivity, getUsersOnGym, PaginationParams} from '@/api/activity';
 import { useLocationTracking } from '@/hooks/useLocationTracking';
@@ -23,6 +24,7 @@ type StatsType = 'weekly' | 'monthly' | 'total';
 
 export default function ActivityScreen() {
     const { user } = useAuth();
+    const { isInGym, sessionDetails, setLocationStatus } = useUser();
     const [selectedStats, setSelectedStats] = useState<StatsType>('weekly');
     const [activityStatus, setActivityStatus] = useState<ActivityStatus | null>(null);
     const [loading, setLoading] = useState(true);
@@ -32,8 +34,19 @@ export default function ActivityScreen() {
     const [hasMorePages, setHasMorePages] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
 
-    const { isInGym, sessionDetails } = useLocationTracking(user?.id || null);
+    const { forceUpdate } = useLocationTracking(user?.id || null, setLocationStatus);
     const { startTime, currentSessionMinutes } = sessionDetails;
+
+    // Debug logging for location tracking state
+    useEffect(() => {
+        console.log('🎯 ActivityScreen - Location Tracking State:', {
+            isInGym,
+            startTime,
+            currentSessionMinutes,
+            hasSessionDetails: !!sessionDetails,
+            userId: user?.id
+        });
+    }, [isInGym, startTime, currentSessionMinutes, sessionDetails, user?.id]);
 
     const fetchStats = useCallback(async (page: number = 0, reset: boolean = false) => {
         if (!user?.id) return;
@@ -82,7 +95,14 @@ export default function ActivityScreen() {
             const hasMore = page < stats.activities.totalPages - 1;
             setHasMorePages(hasMore);
 
-        } catch {
+            console.log('📊 Stats fetched:', {
+                selectedStats,
+                totalMinutes: stats.totalMinutes,
+                totalActivities: stats.activities.totalElements
+            });
+
+        } catch (error) {
+            console.error('❌ Error fetching stats:', error);
             Alert.alert('Błąd', 'Nie udało się pobrać statystyk aktywności');
         } finally {
             setLoading(false);
@@ -90,15 +110,36 @@ export default function ActivityScreen() {
         }
     }, [user?.id, selectedStats]);
 
+    // Fetch current gym occupancy count
+    const fetchOnGymCount = useCallback(async () => {
+        try {
+            const count = await getUsersOnGym();
+            setOnGymCount(count);
+            console.log('👥 Gym occupancy:', count);
+        } catch (error) {
+            console.error('❌ Error fetching gym count:', error);
+            Alert.alert('Błąd', 'Błąd przy pobieraniu liczby osób na siłowni');
+        }
+    }, []);
+
     // Refresh data when screen comes into focus
     useFocusEffect(
         useCallback(() => {
+            console.log('🔄 ActivityScreen focused');
             if (user?.id) {
+                // Force location update to get latest gym status
+                console.log('📍 Calling forceUpdate...');
+                forceUpdate().then(() => {
+                    console.log('✅ forceUpdate completed');
+                }).catch((error) => {
+                    console.error('❌ forceUpdate error:', error);
+                });
+
                 fetchOnGymCount();
                 setCurrentPage(0);
                 fetchStats(0, true);
             }
-        }, [fetchStats, user?.id])
+        }, [user?.id, forceUpdate, fetchOnGymCount, fetchStats])
     );
 
     // Handle selectedStats change - reset page and fetch new data
@@ -109,24 +150,18 @@ export default function ActivityScreen() {
         }
     }, [selectedStats, user?.id]);
 
-
-    // Fetch current gym occupancy count
-    const fetchOnGymCount = async () => {
-        try {
-            const count = await getUsersOnGym();
-            setOnGymCount(count);
-        } catch {
-            Alert.alert('Błąd', 'Błąd przy pobieraniu liczby osób na siłowni');
-        }
-    };
-
     // Handle pull-to-refresh
     const handleRefresh = async () => {
+        console.log('🔄 Manual refresh triggered');
         setRefreshing(true);
         setCurrentPage(0);
-        await fetchStats(0, true);
-        await fetchOnGymCount();
+        await Promise.all([
+            forceUpdate(),
+            fetchStats(0, true),
+            fetchOnGymCount()
+        ]);
         setRefreshing(false);
+        console.log('✅ Manual refresh completed');
     };
 
     // Load more activities for pagination
@@ -141,7 +176,6 @@ export default function ActivityScreen() {
     // Handle stats type selection
     const handleStatsTypeChange = (statsType: StatsType) => {
         setSelectedStats(statsType);
-        // Reset page when changing stats type - fetchStats will be called by useEffect
         setCurrentPage(0);
     };
 
@@ -165,8 +199,14 @@ export default function ActivityScreen() {
 
     // Get activity status information for current session
     const getActivityStatusInfo = () => {
-        if (!isInGym) return null;
+        console.log('🔍 getActivityStatusInfo called, isInGym:', isInGym);
 
+        if (!isInGym) {
+            console.log('⚠️ Not in gym, returning null');
+            return null;
+        }
+
+        console.log('✅ In gym, returning status info');
         return {
             title: 'Trening w toku',
             icon: 'fitness' as const,
@@ -187,6 +227,14 @@ export default function ActivityScreen() {
     }
 
     const statusInfo = getActivityStatusInfo();
+
+    console.log('🎨 Render state:', {
+        isInGym,
+        statusInfo: !!statusInfo,
+        willShowCard: !!(isInGym && statusInfo),
+        currentSessionMinutes,
+        startTime
+    });
 
     return (
         <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>

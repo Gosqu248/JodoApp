@@ -3,14 +3,13 @@ import { Platform } from 'react-native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LAST_NOTIFICATION_KEY = 'last_workout_notification';
-const NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minut
+const NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
-// Configure how notifications are handled when app is in foreground
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldShowBanner: true,
         shouldShowList: true,
-        shouldPlaySound: false,
+        shouldPlaySound: true,
         shouldSetBadge: false,
     }),
 });
@@ -20,42 +19,121 @@ Notifications.setNotificationHandler({
  * @returns Promise<boolean> - true if permission granted, false otherwise
  */
 export async function registerForPushNotificationsAsync(): Promise<boolean> {
-    // Configure notification channel for Android
-    if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
-            importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#FF231F7C',
-        });
-    }
+    try {
+        // Configure notification channel for Android
+        if (Platform.OS === 'android') {
+            await Notifications.setNotificationChannelAsync('default', {
+                name: 'Ogólne',
+                importance: Notifications.AndroidImportance.HIGH,
+                vibrationPattern: [0, 250, 250, 250],
+                lightColor: '#ffc500',
+                sound: 'default',
+                enableVibrate: true,
+                showBadge: true,
+            });
 
-    const { status } = await Notifications.requestPermissionsAsync();
-    return status === 'granted';
+            await Notifications.setNotificationChannelAsync('workout', {
+                name: 'Treningi',
+                importance: Notifications.AndroidImportance.HIGH,
+                vibrationPattern: [0, 250, 250, 250],
+                lightColor: '#ffc500',
+                sound: 'default',
+                enableVibrate: true,
+                showBadge: true,
+            });
+        }
+
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+
+        if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+            console.log('Brak uprawnień do powiadomień');
+            return false;
+        }
+
+        console.log('Uprawnienia do powiadomień przyznane');
+        return true;
+    } catch (error) {
+        console.error('Błąd podczas rejestracji powiadomień:', error);
+        return false;
+    }
 }
 
 /**
  * Sends a local notification when workout starts
  * @param startTime - The time when the workout started
  */
-export async function sendWorkoutStartedNotification(startTime: string) {
-    const now = new Date.now();
-    const last = await AsyncStorage.getItem(LAST_NOTIFICATION_KEY);
-    if (last && now - Number(last) < NOTIFICATION_COOLDOWN_MS) {
-        return;
+export async function sendWorkoutStartedNotification(startTime: string): Promise<void> {
+    try {
+        const now = Date.now();
+        const lastNotificationStr = await AsyncStorage.getItem(LAST_NOTIFICATION_KEY);
+
+        // Check cooldown
+        if (lastNotificationStr) {
+            const lastNotification = Number(lastNotificationStr);
+            if (!isNaN(lastNotification) && now - lastNotification < NOTIFICATION_COOLDOWN_MS) {
+                console.log('Powiadomienie zablokowane przez cooldown');
+                return;
+            }
+        }
+
+        const startDate = new Date(startTime);
+        const timeString = startDate.toLocaleTimeString('pl-PL', {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+
+        // Send notification
+        const notificationId = await Notifications.scheduleNotificationAsync({
+            content: {
+                title: 'Właśnie zacząłeś trening! 💪',
+                body: `Godzina rozpoczęcia: ${timeString}`,
+                sound: true,
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+                data: {
+                    type: 'workout_started',
+                    startTime: startTime,
+                },
+            },
+            trigger: null, // Immediately
+        });
+
+        // Save timestamp of last notification
+        await AsyncStorage.setItem(LAST_NOTIFICATION_KEY, now.toString());
+
+        console.log('Powiadomienie wysłane:', notificationId);
+    } catch (error) {
+        console.error('Błąd wysyłania powiadomienia:', error);
     }
+}
 
-    const startDate = new Date(startTime);
-    const timeString = startDate.toLocaleTimeString('pl-PL', {
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+/**
+ * Sends a notification when workout ends
+ * @param duration - Duration of the workout in minutes
+ */
+export async function sendWorkoutEndedNotification(duration: number): Promise<void> {
+    try {
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title: 'Trening zakończony! 🎉',
+                body: `Gratulacje! Trenowałeś ${duration} minut`,
+                sound: true,
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+                data: {
+                    type: 'workout_ended',
+                    duration: duration,
+                },
+            },
+            trigger: null,
+        });
 
-    await Notifications.scheduleNotificationAsync({
-        content: {
-            title: 'Właśnie zacząłeś trening! 💪',
-            body: `Godzina rozpoczęcia: ${timeString}`,
-        },
-        trigger: null,
-    });
+        console.log('Powiadomienie o zakończeniu treningu wysłane');
+    } catch (error) {
+        console.error('Błąd wysyłania powiadomienia o zakończeniu:', error);
+    }
 }

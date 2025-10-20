@@ -35,7 +35,8 @@ export default {
                 "ACCESS_COARSE_LOCATION",
                 "ACCESS_BACKGROUND_LOCATION",
                 "FOREGROUND_SERVICE",
-                "WAKE_LOCK"
+                "WAKE_LOCK",
+                "POST_NOTIFICATIONS"
             ],
             package: "com.gosqu.JodoApp"
         },
@@ -54,6 +55,15 @@ export default {
                     isIosBackgroundLocationEnabled: true,
                     isAndroidBackgroundLocationEnabled: true,
                     UIBackgroundModes: ["location"]
+                }
+            ],
+            [
+                "expo-notifications",
+                {
+                    icon: "./assets/images/icon.png",
+                    color: "#ffc500",
+                    defaultChannel: "default",
+                    sounds: []
                 }
             ],
             [

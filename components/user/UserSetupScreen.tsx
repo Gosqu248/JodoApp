@@ -5,12 +5,12 @@ import {
     View,
     TouchableOpacity,
     ScrollView,
-    SafeAreaView,
     StatusBar,
     TextInput,
     Alert,
     Platform
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {Image} from 'expo-image';
 import {Ionicons} from '@expo/vector-icons';
 import {useUser} from '@/context/UserContext';
@@ -80,9 +80,10 @@ export default function UserSetupScreen() {
     };
 
     const handleDateChange = (event: any, selectedDate?: Date) => {
-        const currentDate = selectedDate || birthDate;
         setShowDatePicker(Platform.OS === 'ios');
-        setBirthDate(currentDate);
+        if (selectedDate) {
+            setBirthDate(selectedDate);
+        }
     };
 
     const handleSubmit = async () => {
@@ -184,7 +185,7 @@ export default function UserSetupScreen() {
                             <Text style={styles.inputLabel}>Data urodzenia *</Text>
                             <TouchableOpacity
                                 style={styles.dateButton}
-                                onPress={() => setShowDatePicker(!showDatePicker)}
+                                onPress={() => setShowDatePicker(true)}
                             >
                                 <Text style={styles.dateText}>
                                     {formatDate(new Date(birthDate))}
@@ -197,9 +198,13 @@ export default function UserSetupScreen() {
                             <DateTimePicker
                                 value={birthDate}
                                 mode="date"
-                                display="spinner"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                                 onChange={handleDateChange}
                                 maximumDate={new Date()}
+                                minimumDate={new Date(1900, 0, 1)}
+                                textColor="#000000"
+                                themeVariant="light"
+                                style={styles.datePicker}
                             />
                         )}
                     </View>
@@ -335,7 +340,8 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 16,
         fontSize: 16,
-        backgroundColor: '#f9f9f9'
+        backgroundColor: '#f9f9f9',
+        color: '#000',
     },
     helperText: {
         fontSize: 12,
@@ -356,6 +362,10 @@ const styles = StyleSheet.create({
     dateText: {
         fontSize: 16,
         color: '#333'
+    },
+    datePicker: {
+        backgroundColor: '#ffffff',
+        marginTop: 10,
     },
     photoCard: {
         backgroundColor: '#fff',
@@ -413,7 +423,8 @@ const styles = StyleSheet.create({
     photoButtonText: {
         fontSize: 16,
         fontWeight: '600',
-        marginLeft: 8
+        marginLeft: 8,
+        color: '#000',
     },
     photoInfo: {
         flexDirection: 'row',
