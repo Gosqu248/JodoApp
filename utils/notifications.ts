@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LAST_NOTIFICATION_KEY = 'last_workout_notification';
-const NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minut
+const NOTIFICATION_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -73,7 +73,7 @@ export async function sendWorkoutStartedNotification(startTime: string): Promise
         const now = Date.now();
         const lastNotificationStr = await AsyncStorage.getItem(LAST_NOTIFICATION_KEY);
 
-        // Sprawdź cooldown
+        // Check cooldown
         if (lastNotificationStr) {
             const lastNotification = Number(lastNotificationStr);
             if (!isNaN(lastNotification) && now - lastNotification < NOTIFICATION_COOLDOWN_MS) {
@@ -88,11 +88,11 @@ export async function sendWorkoutStartedNotification(startTime: string): Promise
             minute: '2-digit',
         });
 
-        // Wyślij powiadomienie
+        // Send notification
         const notificationId = await Notifications.scheduleNotificationAsync({
             content: {
-                title: 'Wlasnie zaczales trening!',
-                body: `Godzina rozpoczecia: ${timeString}`,
+                title: 'Właśnie zacząłeś trening! 💪',
+                body: `Godzina rozpoczęcia: ${timeString}`,
                 sound: true,
                 priority: Notifications.AndroidNotificationPriority.HIGH,
                 data: {
@@ -100,10 +100,10 @@ export async function sendWorkoutStartedNotification(startTime: string): Promise
                     startTime: startTime,
                 },
             },
-            trigger: null, // Natychmiast
+            trigger: null, // Immediately
         });
 
-        // Zapisz timestamp ostatniego powiadomienia
+        // Save timestamp of last notification
         await AsyncStorage.setItem(LAST_NOTIFICATION_KEY, now.toString());
 
         console.log('Powiadomienie wysłane:', notificationId);
@@ -120,8 +120,8 @@ export async function sendWorkoutEndedNotification(duration: number): Promise<vo
     try {
         await Notifications.scheduleNotificationAsync({
             content: {
-                title: 'Trening zakonczony!',
-                body: `Gratulacje! Trenowales ${duration} minut`,
+                title: 'Trening zakończony! 🎉',
+                body: `Gratulacje! Trenowałeś ${duration} minut`,
                 sound: true,
                 priority: Notifications.AndroidNotificationPriority.HIGH,
                 data: {
@@ -136,23 +136,4 @@ export async function sendWorkoutEndedNotification(duration: number): Promise<vo
     } catch (error) {
         console.error('Błąd wysyłania powiadomienia o zakończeniu:', error);
     }
-}
-
-/**
- * Cancel all scheduled notifications
- */
-export async function cancelAllNotifications(): Promise<void> {
-    try {
-        await Notifications.cancelAllScheduledNotificationsAsync();
-        console.log('Wszystkie powiadomienia anulowane');
-    } catch (error) {
-        console.error('Błąd anulowania powiadomień:', error);
-    }
-}
-
-/**
- * Get notification permissions status
- */
-export async function getNotificationPermissions(): Promise<Notifications.NotificationPermissionsStatus> {
-    return await Notifications.getPermissionsAsync();
 }

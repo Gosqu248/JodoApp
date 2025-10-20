@@ -13,9 +13,9 @@ import {
 } from '@/api/user';
 import { UserInfo } from '@/types/UserInfo';
 import { useAuth } from './AuthContext';
-import {Membership} from "@/types/Membership";
-import {getMembership} from "@/api/membership";
-import {handleApiError} from "@/utils/errorHandler";
+import { Membership } from "@/types/Membership";
+import { getMembership } from "@/api/membership";
+import { handleApiError } from "@/utils/errorHandler";
 
 /**
  * Interface defining the shape of user context values
@@ -25,9 +25,19 @@ interface UserContextValue {
     membership: Membership | null;
     loading: boolean;
     membershipLoading: boolean;
+    // Location tracking state
+    isInGym: boolean;
+    sessionDetails: {
+        startTime: string | null;
+        currentSessionMinutes: number | null;
+    };
     refreshUserInfo: () => Promise<void>;
     refreshMembership: () => Promise<void>;
     updateUserInfo: (params: UpdateUserInfoParams) => Promise<void>;
+    setLocationStatus: (isInGym: boolean, sessionDetails: {
+        startTime: string | null;
+        currentSessionMinutes: number | null;
+    }) => void;
 }
 
 /**
@@ -38,9 +48,12 @@ const UserContext = createContext<UserContextValue>({
     membership: null,
     loading: true,
     membershipLoading: true,
+    isInGym: false,
+    sessionDetails: { startTime: null, currentSessionMinutes: null },
     refreshUserInfo: async () => {},
     refreshMembership: async () => {},
-    updateUserInfo: async () => {}
+    updateUserInfo: async () => {},
+    setLocationStatus: () => {}
 });
 
 interface UserProviderProps {
@@ -56,6 +69,17 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     const [membership, setMembership] = useState<Membership | null>(null);
     const [loading, setLoading] = useState(true);
     const [membershipLoading, setMembershipLoading] = useState(true);
+
+    // Location tracking state - now global
+    const [isInGym, setIsInGym] = useState(false);
+    const [sessionDetails, setSessionDetails] = useState<{
+        startTime: string | null;
+        currentSessionMinutes: number | null;
+    }>({
+        startTime: null,
+        currentSessionMinutes: null
+    });
+
     const { user, completeFirstLogin } = useAuth();
 
     /**
@@ -116,6 +140,22 @@ export const UserProvider = ({ children }: UserProviderProps) => {
     }, [completeFirstLogin]);
 
     /**
+     * Updates location tracking status
+     * Called by useLocationTracking hook when location status changes
+     */
+    const setLocationStatus = useCallback((newIsInGym: boolean, newSessionDetails: {
+        startTime: string | null;
+        currentSessionMinutes: number | null;
+    }) => {
+        console.log('📍 UserContext: Location status updated', {
+            isInGym: newIsInGym,
+            sessionDetails: newSessionDetails
+        });
+        setIsInGym(newIsInGym);
+        setSessionDetails(newSessionDetails);
+    }, []);
+
+    /**
      * Effect hook to handle user data initialization
      * Fetches user info and membership when user is available and not on first login
      */
@@ -146,9 +186,12 @@ export const UserProvider = ({ children }: UserProviderProps) => {
                 membership,
                 loading,
                 membershipLoading,
+                isInGym,
+                sessionDetails,
                 refreshUserInfo,
                 refreshMembership,
-                updateUserInfo
+                updateUserInfo,
+                setLocationStatus
             }}
         >
             {children}
