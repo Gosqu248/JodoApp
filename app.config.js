@@ -19,7 +19,12 @@ export default {
                 UIBackgroundModes: ["location"],
                 ITSAppUsesNonExemptEncryption: false,
                 NSAppTransportSecurity: {
-                    NSAllowsArbitraryLoads: true
+                    NSExceptionDomains: {
+                        "jodogym.pl": {
+                            NSExceptionAllowsInsecureHTTPLoads: true,
+                            NSIncludesSubdomains: true
+                        }
+                    }
                 }
             },
             bundleIdentifier: "com.gosqu.JodoApp"
