@@ -5,6 +5,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     Dimensions,
+    Alert,
 } from 'react-native';
 import Animated,
 {
@@ -16,6 +17,7 @@ import Animated,
 } from 'react-native-reanimated';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '@/context/UserContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const PANEL_WIDTH = SCREEN_WIDTH * 0.85;
@@ -31,10 +33,11 @@ export default function SettingsSlidePanel({
                                                visible,
                                                onClose,
                                                onChangePassword,
-                                               onChangePhoto
+                                               onChangePhoto,
                                            }: SettingsSlidePanelProps) {
     const translateX = useSharedValue(PANEL_WIDTH);
     const backdropOpacity = useSharedValue(0);
+    const { deleteUserAccount } = useUser();
 
     // Animate panel entrance/exit based on visibility
     useEffect(() => {
@@ -70,6 +73,42 @@ export default function SettingsSlidePanel({
                 });
             }
         });
+
+    // Handler for delete account with confirmation
+    const handleDeleteAccount = () => {
+        // Zamknij panel przed wyświetleniem alertu
+        onClose();
+
+        // Pokaż alert z opóźnieniem, aby panel zdążył się zamknąć
+        setTimeout(() => {
+            Alert.alert(
+                "Usuń konto",
+                "Czy na pewno chcesz usunąć swoje konto? Ta operacja jest nieodwracalna i spowoduje trwałe usunięcie wszystkich Twoich danych, w tym historii treningów, karnetów i zdjęć.",
+                [
+                    {
+                        text: "Anuluj",
+                        style: "cancel"
+                    },
+                    {
+                        text: "Usuń konto",
+                        style: "destructive",
+                        onPress: async () => {
+                            try {
+                                await deleteUserAccount();
+                                console.log('✅ Konto zostało pomyślnie usunięte');
+                            } catch (error) {
+                                console.error('❌ Błąd podczas usuwania konta:', error);
+                                Alert.alert(
+                                    "Błąd",
+                                    "Nie udało się usunąć konta. Sprawdź połączenie internetowe i spróbuj ponownie."
+                                );
+                            }
+                        }
+                    }
+                ]
+            );
+        }, 350);
+    };
 
     // Animated styles for panel position
     const panelAnimatedStyle = useAnimatedStyle(() => {
@@ -168,6 +207,26 @@ export default function SettingsSlidePanel({
                             </View>
                             <Ionicons name="chevron-forward" size={20} color="#999" />
                         </TouchableOpacity>
+
+                        <View style={styles.divider} />
+
+                        {/* Delete Account Option */}
+                        <TouchableOpacity
+                            style={[styles.menuItem, styles.dangerMenuItem]}
+                            onPress={handleDeleteAccount}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[styles.menuIconContainer, styles.dangerIconContainer]}>
+                                <Ionicons name="trash-outline" size={22} color="#ff3b30" />
+                            </View>
+                            <View style={styles.menuContent}>
+                                <Text style={[styles.menuTitle, styles.dangerText]}>Usuń konto</Text>
+                                <Text style={styles.menuDescription}>
+                                    Trwale usuń swoje konto i wszystkie dane
+                                </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#ff3b30" />
+                        </TouchableOpacity>
                     </View>
 
                     {/* Instructional footer */}
@@ -252,6 +311,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#fafafa',
         marginBottom: 12,
     },
+    dangerMenuItem: {
+        backgroundColor: '#fff5f5',
+        borderWidth: 1,
+        borderColor: '#ffe5e5',
+    },
     menuIconContainer: {
         width: 44,
         height: 44,
@@ -269,6 +333,11 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
     },
+    dangerIconContainer: {
+        backgroundColor: '#fff0f0',
+        borderWidth: 1,
+        borderColor: '#ffe0e0',
+    },
     menuContent: {
         flex: 1,
     },
@@ -277,6 +346,9 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#333',
         marginBottom: 4,
+    },
+    dangerText: {
+        color: '#ff3b30',
     },
     menuDescription: {
         fontSize: 14,
