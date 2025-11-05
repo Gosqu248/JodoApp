@@ -27,7 +27,7 @@ import {ErrorResponse} from "@/types/ErrorResponse";
 
 export default function UserProfileScreen() {
     const { user, logout } = useAuth();
-    const { userInfo, membership, loading: userLoading, membershipLoading, refreshUserInfo, refreshMembership } = useUser();
+    const { userInfo, membership, loading: userLoading, membershipLoading, refreshUserInfo, refreshMembership, deleteUserAccount } = useUser();
     const router = useRouter();
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(true);
@@ -101,6 +101,25 @@ export default function UserProfileScreen() {
     const handlePushToPurchase = useCallback(() => router.push('/purchase'), [router]);
     const handlePushToRanking = useCallback(() => router.push('/ranking'), [router]);
     const handlePushToMembershipTypes = useCallback(() => router.push('/membershipTypes'), [router]);
+
+    // POPRAWIONE: Obsługa wylogowania z potwierdzeniem
+    const handleLogout = useCallback(() => {
+        Alert.alert(
+            "Wyloguj się",
+            "Czy na pewno chcesz się wylogować?",
+            [
+                {
+                    text: "Anuluj",
+                    style: "cancel"
+                },
+                {
+                    text: "Wyloguj",
+                    style: "default",
+                    onPress: logout
+                }
+            ]
+        );
+    }, [logout]);
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
@@ -322,15 +341,15 @@ export default function UserProfileScreen() {
                     </View>
                 </View>
 
-                {/* Przycisk wylogowania */}
                 <TouchableOpacity
                     style={styles.logoutButton}
-                    onPress={logout}
+                    onPress={handleLogout}
                 >
                     <Ionicons name="log-out-outline" size={20} color="#ffc500" />
                     <Text style={styles.logoutText}>Wyloguj się</Text>
                 </TouchableOpacity>
             </ScrollView>
+
             {/* Settings Slide Panel */}
             <SettingsSlidePanel
                 visible={settingsVisible}
@@ -474,6 +493,19 @@ const styles = StyleSheet.create({
     infoLabel: { fontSize: 15, color: '#666', marginBottom: 3 },
     infoValue: { fontSize: 17, color: '#000', fontWeight: '600' },
     divider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 12 },
-    logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', borderRadius: 12, padding: 16, marginTop: 10 },
-    logoutText: { color: '#ffc500', fontSize: 16, fontWeight: '600', marginLeft: 8 },
+    logoutButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#000000',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 10
+    },
+    logoutText: {
+        color: '#ffc500',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 8
+    },
 });

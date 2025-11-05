@@ -1,3 +1,33 @@
+/**
+ * BACKGROUND LOCATION TRACKING FOR AUTOMATIC WORKOUT DETECTION
+ *
+ * This module implements background location tracking for JodoGym fitness app.
+ *
+ * PURPOSE:
+ * - Automatically detect when user enters/exits the gym area
+ * - Track workout duration without manual start/stop
+ * - Send notifications when workouts begin/end
+ * - Record workout history automatically for better fitness tracking
+ *
+ * USER BENEFITS:
+ * - Hands-free workout tracking - no need to remember to start/stop timer
+ * - Accurate workout duration - captures exact entry/exit times
+ * - Complete workout history - never miss recording a gym session
+ * - Workout notifications - stay informed about training progress
+ *
+ * TECHNICAL IMPLEMENTATION:
+ * - Uses Location.startLocationUpdatesAsync with background task
+ * - Updates every 3 minutes or 15 meters (battery-efficient)
+ * - Sends location to server to detect gym proximity
+ * - Shows iOS background location indicator for transparency
+ * - Sends local notifications on gym entry/exit
+ *
+ * PRIVACY & BATTERY:
+ * - Location only checked every 3 minutes (not continuous)
+ * - Only sends coordinates to server, no other data
+ * - Background tracking stops when user logs out
+ * - Uses deferred updates for battery efficiency
+ */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Alert, AppState, AppStateStatus } from 'react-native';
 import * as Location from 'expo-location';
@@ -9,8 +39,8 @@ import { sendWorkoutStartedNotification, sendWorkoutEndedNotification } from '@/
 import type { LocationResponse } from '@/types/LocationResponse';
 import { LocationRequest } from "@/types/LocationRequest";
 
-const LOCATION_UPDATE_INTERVAL = 180_000; // 3 minutes
-const LOCATION_DISTANCE_INTERVAL = 15; // 15 meters
+const LOCATION_UPDATE_INTERVAL = 180_000; // 3 minutes - battery-efficient interval
+const LOCATION_DISTANCE_INTERVAL = 15; // 15 meters - significant movement threshold
 const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
 // AsyncStorage keys for background task

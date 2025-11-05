@@ -9,7 +9,8 @@ import React, {
 import {
     getUserInfo as fetchUserInfo,
     updateUserInfo as apiUpdateUserInfo,
-    UpdateUserInfoParams
+    UpdateUserInfoParams,
+    deleteUserAccount as apiDeleteUserAccount
 } from '@/api/user';
 import { UserInfo } from '@/types/UserInfo';
 import { useAuth } from './AuthContext';
@@ -32,6 +33,7 @@ interface UserContextValue {
         currentSessionMinutes: number | null;
     };
     refreshUserInfo: () => Promise<void>;
+    deleteUserAccount: () => Promise<void>;
     refreshMembership: () => Promise<void>;
     updateUserInfo: (params: UpdateUserInfoParams) => Promise<void>;
     setLocationStatus: (isInGym: boolean, sessionDetails: {
@@ -51,6 +53,7 @@ const UserContext = createContext<UserContextValue>({
     isInGym: false,
     sessionDetails: { startTime: null, currentSessionMinutes: null },
     refreshUserInfo: async () => {},
+    deleteUserAccount: async () => {},
     refreshMembership: async () => {},
     updateUserInfo: async () => {},
     setLocationStatus: () => {}
@@ -80,7 +83,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
         currentSessionMinutes: null
     });
 
-    const { user, completeFirstLogin } = useAuth();
+    const { user, completeFirstLogin, logout } = useAuth();
 
     /**
      * Fetches and updates user information from the API
@@ -101,6 +104,25 @@ export const UserProvider = ({ children }: UserProviderProps) => {
             setLoading(false);
         }
     }, [user]);
+
+    const deleteUserAccount = useCallback(async () => {
+        if (user?.id) {
+            try {
+                await apiDeleteUserAccount(user.id);
+
+                setUserInfo(null);
+                setMembership(null);
+
+                await logout();
+
+                console.log('✅ Konto zostało usunięte i użytkownik wylogowany');
+            } catch (error) {
+                console.error('❌ Błąd podczas usuwania konta:', error);
+                handleApiError(error);
+                throw error;
+            }
+        }
+    }, [user?.id, logout]);
 
     /**
      * Fetches and updates membership information from the API
@@ -189,6 +211,7 @@ export const UserProvider = ({ children }: UserProviderProps) => {
                 isInGym,
                 sessionDetails,
                 refreshUserInfo,
+                deleteUserAccount,
                 refreshMembership,
                 updateUserInfo,
                 setLocationStatus

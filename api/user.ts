@@ -17,6 +17,10 @@ export const getUserInfo = async (): Promise<UserInfo> => {
     return data;
 };
 
+export const deleteUserAccount = async (userId: string): Promise<void> => {
+    await privateApi.delete('/users/' + userId);
+}
+
 export const updateUserInfo = async (params: UpdateUserInfoParams): Promise<UserInfo> => {
     const formData = new FormData();
     formData.append('firstName', params.firstName);
