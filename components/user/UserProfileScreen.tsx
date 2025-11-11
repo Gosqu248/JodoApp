@@ -27,7 +27,7 @@ import {ErrorResponse} from "@/types/ErrorResponse";
 
 export default function UserProfileScreen() {
     const { user, logout } = useAuth();
-    const { userInfo, membership, loading: userLoading, membershipLoading, refreshUserInfo, refreshMembership, deleteUserAccount } = useUser();
+    const { userInfo, membership, loading: userLoading, membershipLoading, refreshUserInfo, refreshMembership } = useUser();
     const router = useRouter();
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [photoLoading, setPhotoLoading] = useState(true);

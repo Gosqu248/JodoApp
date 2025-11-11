@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Alert, Platform, ActionSheetIOS } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 
 export function useImagePicker() {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -30,8 +29,8 @@ export function useImagePicker() {
                 mediaTypes: ['images'],
                 allowsEditing: true,
                 aspect: [1, 1],
-                quality: 0.3, // Zwiększona jakość
-                base64: false, // Wyłączone base64 dla lepszej wydajności
+                quality: 0.3,
+                base64: false,
                 exif: false,
             });
 
@@ -66,28 +65,7 @@ export function useImagePicker() {
 
     const processImage = async (uri: string) => {
         try {
-            if (Platform.OS === 'android') {
-                const fileInfo = await FileSystem.getInfoAsync(uri);
-
-                if (!fileInfo.exists) {
-                    throw new Error('File does not exist');
-                }
-
-                const filename = uri.split('/').pop() || `image_${Date.now()}.jpg`;
-                const newPath = `${FileSystem.cacheDirectory}${filename}`;
-
-                try {
-                    await FileSystem.copyAsync({
-                        from: uri,
-                        to: newPath
-                    });
-                    setSelectedImage(newPath);
-                } catch (copyError) {
-                    setSelectedImage(uri);
-                }
-            } else {
-                setSelectedImage(uri);
-            }
+            setSelectedImage(uri);
         } catch (error) {
             console.error('Process image error:', error);
             Alert.alert('Błąd', 'Nie udało się przetworzyć zdjęcia');
