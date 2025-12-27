@@ -14,7 +14,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { publicApi } from '@/api/client';
 import { Post } from '@/types/Post';
 import {PageResponse} from "@/types/PageResponse";
-import { apiUrl } from '@/api/apiUrl';
 import {handleApiError} from "@/utils/errorHandler";
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -113,11 +112,11 @@ export default function PostsScreen() {
         <PostItem
             key={item.id}
             id={item.id}
-            title={item.title}
             description={item.content}
-            photo={{ uri: `${apiUrl}/posts/${item.id}/photo` }}
+            imageUrl={item.imageUrl}
+            videoUrl={item.videoUrl}
+            facebookPostUrl={item.facebookPostUrl}
             createdDate={item.createdDate}
-            type={item.postType}
         />
     );
 

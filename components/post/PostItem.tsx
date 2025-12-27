@@ -3,10 +3,9 @@ import {
     Image,
     StyleSheet,
     TouchableOpacity,
-    ImageSourcePropType,
     View,
-    ColorValue,
     ScrollView,
+    Linking,
 } from 'react-native';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -14,8 +13,8 @@ import 'dayjs/locale/pl';
 import {ThemedText} from '@/components/ThemedText';
 import {ThemedView} from '@/components/ThemedView';
 import {LinearGradient} from 'expo-linear-gradient';
-import {Post} from '@/types/Post';
 import Modal from 'react-native-modal';
+import { Video, ResizeMode } from 'expo-av';
 
 // Configure dayjs for Polish localization and relative time formatting
 dayjs.extend(relativeTime);
@@ -23,39 +22,40 @@ dayjs.locale('pl');
 
 interface PostItemProps {
     id: string;
-    title: string;
     description: string;
-    photo?: ImageSourcePropType;
+    imageUrl: string | null;
+    videoUrl: string | null;
+    facebookPostUrl: string | null;
     createdDate: string;
-    type?: Post['postType'];
 }
 
 /**
  * PostItem Component
  *
- * Displays a single post item with adaptive styling based on post type.
- * Features a modal for expanded view and custom styling for different post categories.
+ * Displays a single post item synced from Facebook.
+ * Features a modal for expanded view with image/video and full description.
  *
  * Key Features:
- * - Adaptive gradient and icon based on post type
- * - Modal for detailed view with image and full description
+ * - Displays images or videos from Facebook
+ * - Modal for detailed view with full description
  * - Polish date formatting with relative time display
+ * - Link to original Facebook post
  * - Touch interactions for opening modal
- * - Responsive design with image overlay effects
+ * - Responsive design with media overlay effects
  *
  * @param id - Unique post identifier
- * @param title - Post title
  * @param description - Post description content
- * @param photo - Optional post image
+ * @param imageUrl - Optional post image URL from Facebook
+ * @param videoUrl - Optional post video URL from Facebook
+ * @param facebookPostUrl - Link to original Facebook post
  * @param createdDate - Post creation date
- * @param type - Post category type (defaults to 'OGŁOSZENIE')
  */
 export default function PostItem({
-                                     title,
                                      description,
-                                     photo,
+                                     imageUrl,
+                                     videoUrl,
+                                     facebookPostUrl,
                                      createdDate,
-                                     type = 'OGŁOSZENIE',
                                  }: PostItemProps) {
     const [modalVisible, setModalVisible] = useState(false);
     const [isScrollable, setIsScrollable] = useState(false);
@@ -64,7 +64,16 @@ export default function PostItem({
     const closeModal = () => setModalVisible(false);
 
     /**
-     * Sprawdza czy treść przekracza maksymalną wysokość
+     * Opens the original Facebook post in browser or Facebook app
+     */
+    const openFacebookPost = () => {
+        if (facebookPostUrl) {
+            Linking.openURL(facebookPostUrl);
+        }
+    };
+
+    /**
+     * Checks if content exceeds maximum height for scrolling
      */
     const handleContentSizeChange = (contentWidth: number, contentHeight: number) => {
         setIsScrollable(contentHeight > 250);
@@ -80,72 +89,46 @@ export default function PostItem({
             : dayjs(createdDate).format('DD.MM.YYYY')
         : '';
 
-    /**
-     * Returns styling configuration based on post type
-     * Each type has its own gradient colors, icon, and badge styling
-     * @returns Configuration object with gradient, icon, badge text and color
-     */
-    const getTypeConfig = () => {
-        switch (type) {
-            case 'ZAMKNIĘCIE':
-                return {gradient: ['#FF6B6B', '#FF8E8E'] as readonly [ColorValue, ColorValue], icon: '🔒', badge: 'ZAMKNIĘCIE', badgeColor: '#FF4444'};
-            case 'PROMOCJA':
-                return {gradient: ['#ffb300', '#edce32'] as readonly [ColorValue, ColorValue], icon: '💪', badge: 'PROMOCJA', badgeColor: '#FFA000'};
-            case 'NOWOŚĆ':
-                return {gradient: ['#4ECDC4', '#44A08D'] as readonly [ColorValue, ColorValue], icon: '🆕', badge: 'NOWOŚĆ', badgeColor: '#00BFA5'};
-            case 'ZAJĘCIA':
-                return {gradient: ['#42A5F5', '#1E88E5'] as readonly [ColorValue, ColorValue], icon: '🏋️‍♀️', badge: 'ZAJĘCIA', badgeColor: '#1565C0'};
-            case 'WYDARZENIE':
-                return {gradient: ['#AB47BC', '#8E24AA'] as readonly [ColorValue, ColorValue], icon: '📅', badge: 'WYDARZENIE', badgeColor: '#6A1B9A'};
-            default:
-                return {gradient: ['#667eea', '#764ba2'] as readonly [ColorValue, ColorValue], icon: '📢', badge: 'OGŁOSZENIE', badgeColor: '#5E72E4'};
-        }
-    };
-
-    const typeConfig = getTypeConfig();
-
     return (
         <>
             <ThemedView style={styles.container}>
-                {/* Header with gradient background, icon, date, and badge */}
-                <LinearGradient colors={typeConfig.gradient} style={styles.headerGradient} start={{x: 0, y: 0}}
-                                end={{x: 1, y: 0}}>
-                    <View style={styles.headerContent}>
-                        <View style={styles.iconContainer}>
-                            <ThemedText style={styles.icon}>{typeConfig.icon}</ThemedText>
-                        </View>
-                        <ThemedText style={styles.dateText}>📅 {dateText}</ThemedText>
-
-                        <View style={[styles.badge, {backgroundColor: typeConfig.badgeColor}]}>
-                            <ThemedText style={styles.badgeText}>{typeConfig.badge}</ThemedText>
-                        </View>
-                    </View>
-                </LinearGradient>
-
-                {/* Optional image with overlay gradient */}
-                {photo && (
-                    <View style={styles.imageContainer}>
-                        <Image source={photo} style={styles.image}/>
-                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.imageOverlay}/>
+                {/* Image or Video */}
+                {imageUrl && (
+                    <View style={styles.mediaContainer}>
+                        <Image source={{ uri: imageUrl }} style={styles.media}/>
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.mediaOverlay}/>
                     </View>
                 )}
 
-                {/* Main content with title, description, and read more button */}
+                {videoUrl && (
+                    <View style={styles.mediaContainer}>
+                        <Video
+                            source={{ uri: videoUrl }}
+                            style={styles.media}
+                            useNativeControls
+                            resizeMode={ResizeMode.CONTAIN}
+                            isLooping
+                        />
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.mediaOverlay}/>
+                    </View>
+                )}
+
+                {/* Main content with description and read more button */}
                 <TouchableOpacity style={styles.contentContainer} onPress={openModal}>
-                    <ThemedText style={styles.title}>{title}</ThemedText>
-                    <ThemedText style={styles.description} numberOfLines={1}>
+                    <ThemedText style={styles.description} numberOfLines={3}>
                         {description}
                     </ThemedText>
 
                     <View style={styles.readMoreContainer}>
-                        <ThemedText style={[styles.readMore, {color: typeConfig.badgeColor}]}>
+                        <ThemedText style={styles.dateText}>📅 {dateText}</ThemedText>
+                        <ThemedText style={styles.readMore}>
                             Zobacz więcej ▼
                         </ThemedText>
                     </View>
                 </TouchableOpacity>
 
-                {/* Accent line at bottom matching post type color */}
-                <View style={[styles.accentLine, {backgroundColor: typeConfig.badgeColor}]}/>
+                {/* Accent line at bottom */}
+                <View style={styles.accentLine}/>
             </ThemedView>
 
             {/* Modal for expanded post view */}
@@ -156,13 +139,27 @@ export default function PostItem({
                 propagateSwipe={true}
             >
                 <ThemedView style={styles.modalContainer}>
-                    {/* Full-size image in modal */}
-                    {photo && <Image source={photo} style={styles.modalImage} resizeMode={"contain"}/>}
+                    {/* Full-size media in modal */}
+                    {imageUrl && (
+                        <Image
+                            source={{ uri: imageUrl }}
+                            style={styles.modalImage}
+                            resizeMode="contain"
+                        />
+                    )}
 
-                    {/* Modal content with full title, description, date and close button */}
+                    {videoUrl && (
+                        <Video
+                            source={{ uri: videoUrl }}
+                            style={styles.modalImage}
+                            useNativeControls
+                            resizeMode={ResizeMode.CONTAIN}
+                            isLooping
+                        />
+                    )}
+
+                    {/* Modal content with full description, date and buttons */}
                     <View style={styles.infoContainer}>
-                        <ThemedText style={styles.modalTitle}>{title}</ThemedText>
-
                         <View style={styles.scrollContainer}>
                             <ScrollView
                                 style={styles.descriptionScrollView}
@@ -173,6 +170,28 @@ export default function PostItem({
                                 onContentSizeChange={handleContentSizeChange}
                                 scrollEnabled={isScrollable}
                             >
+
+                                {facebookPostUrl && (
+                                    <View style={styles.topContainer}>
+                                        <ThemedText style={styles.modalDate}>📅 {dateText}</ThemedText>
+
+                                        <TouchableOpacity
+                                            style={styles.modalFacebookButton}
+                                            onPress={openFacebookPost}
+                                            activeOpacity={0.7}
+                                        >
+                                            <View style={styles.facebookButtonContent}>
+                                                <View style={styles.facebookIconCircle}>
+                                                    <ThemedText style={styles.facebookIcon}>f</ThemedText>
+                                                </View>
+                                                <ThemedText style={styles.modalFacebookButtonText}>
+                                                    Zobacz na Facebooku
+                                                </ThemedText>
+                                            </View>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
                                 <ThemedText style={styles.modalDescription}>{description}</ThemedText>
                             </ScrollView>
                             {isScrollable && (
@@ -184,7 +203,6 @@ export default function PostItem({
                             )}
                         </View>
 
-                        <ThemedText style={styles.modalDate}>📅 {dateText}</ThemedText>
                         <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                             <ThemedText style={styles.closeButtonText}>Zamknij</ThemedText>
                         </TouchableOpacity>
@@ -210,8 +228,16 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#d0d2d5',
     },
-    headerGradient: {height: 50, justifyContent: 'center', paddingHorizontal: 20},
-    headerContent: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
+    headerGradient: {
+        height: 50,
+        justifyContent: 'center',
+        paddingHorizontal: 20
+    },
+    headerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+    },
     iconContainer: {
         width: 40,
         height: 40,
@@ -220,43 +246,105 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center'
     },
-    icon: {fontSize: 20},
+    icon: {
+        fontSize: 20
+    },
     badge: {
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 15,
+        backgroundColor: '#5E72E4',
         shadowColor: '#000',
         shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.25,
         shadowRadius: 4,
         elevation: 3
     },
-    badgeText: {color: '#FFFFFF', fontSize: 12, fontWeight: 'bold', letterSpacing: 0.5},
-    imageContainer: {position: 'relative'},
-    image: {width: '100%', aspectRatio: 5/4},
-    imageOverlay: {position: 'absolute', bottom: 0, left: 0, right: 0, height: 60},
-    contentContainer: {padding: 20},
-    title: {fontSize: 22, fontWeight: 'bold', marginBottom: 12, color: '#2D3748', lineHeight: 28},
-    description: {fontSize: 16, lineHeight: 24, color: '#4A5568', marginBottom: 16},
-    readMoreContainer: {
-        alignSelf: 'flex-end',
+    badgeText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: 'bold',
+        letterSpacing: 0.5
     },
-    readMore: {paddingVertical: 8,
+    mediaContainer: {
+        position: 'relative'
+    },
+    media: {
+        width: '100%',
+        aspectRatio: 10 / 9,
+    },
+    mediaOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 60
+    },
+    contentContainer: {
+        padding: 20
+    },
+    description: {
+        fontSize: 16,
+        lineHeight: 24,
+        color: '#4A5568',
+        marginBottom: 16
+    },
+    readMoreContainer: {
+        width: '100%',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    readMore: {
+        paddingVertical: 8,
         paddingHorizontal: 25,
         borderRadius: 20,
-        backgroundColor: 'rgba(94, 114, 228, 0.1)', fontSize: 14, fontWeight: '600'},
-    footer: {marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E2E8F0'},
-    dateContainer: {flexDirection: 'row', alignItems: 'center'},
-    dateText: {fontSize: 14, color: '#ffffff', fontWeight: '500'},
-    accentLine: {height: 4, width: '100%'},
+        backgroundColor: 'rgba(94, 114, 228, 0.1)',
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#5E72E4'
+    },
+    facebookButton: {
+        marginHorizontal: 20,
+        marginBottom: 15,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 15,
+        backgroundColor: '#1877F2',
+        alignItems: 'center',
+    },
+    facebookButtonText: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    dateText: {
+        fontSize: 14,
+        color: '#4A5568',
+        fontWeight: '500'
+    },
+    accentLine: {
+        height: 4,
+        width: '100%',
+        backgroundColor: '#5E72E4'
+    },
     modalContainer: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    modalImage: {width: '90%', borderRadius: 20, aspectRatio: 1, marginTop: 5},
-    infoContainer: {paddingVertical: 5, paddingHorizontal: 20, width: '100%', alignItems: 'center'},
-    modalTitle: {fontSize: 24, fontWeight: 'bold', marginTop: 5, textAlign: 'center', marginBottom: 12, color: '#2D3748'},
+    modalImage: {
+        width: '100%',
+        borderRadius: 20,
+        aspectRatio: 1,
+        marginTop: 5
+    },
+    infoContainer: {
+        paddingVertical: 5,
+        paddingHorizontal: 20,
+        width: '100%',
+        alignItems: 'center'
+    },
     scrollContainer: {
         width: '100%',
         maxHeight: 250,
@@ -278,9 +366,71 @@ const styles = StyleSheet.create({
         height: 30,
         pointerEvents: 'none',
     },
-    modalDescription: {fontSize: 14, lineHeight: 24, color: '#4A5568'},
-    modalDateContainer: {display: "flex", flexDirection: 'row', gap: 10, justifyContent: "center", alignItems: 'center'},
-    modalDate: {fontSize: 14, color: '#718096', fontWeight: '500', marginBottom: 10},
-    closeButton: {paddingVertical: 10, paddingHorizontal: 50, borderRadius: 20, backgroundColor: '#ffb300'},
-    closeButtonText: {color: '#FFFFFF', fontSize: 20, fontWeight: '600'},
+    topContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    modalDescription: {
+        fontSize: 16,
+        lineHeight: 24,
+        color: '#4A5568'
+    },
+    modalDate: {
+        fontSize: 14,
+        color: '#718096',
+        fontWeight: '500',
+        marginBottom: 10
+    },
+    modalFacebookButton: {
+        alignSelf: 'center',
+        marginBottom: 12,
+        marginTop: 2,
+        borderRadius: 12,
+        backgroundColor: '#1877F2',
+        shadowColor: '#1877F2',
+        shadowOffset: {width: 0, height: 3},
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+    facebookButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+        gap: 8,
+    },
+    facebookIconCircle: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    facebookIcon: {
+        color: '#1877F2',
+        fontSize: 16,
+        fontWeight: 'bold',
+        fontFamily: 'sans-serif',
+    },
+    modalFacebookButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
+        letterSpacing: 0.2,
+    },
+    closeButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 50,
+        borderRadius: 20,
+        backgroundColor: '#ffb300'
+    },
+    closeButtonText: {
+        color: '#FFFFFF',
+        fontSize: 20,
+        fontWeight: '600'
+    },
 });
