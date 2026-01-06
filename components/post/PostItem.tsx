@@ -58,7 +58,6 @@ export default function PostItem({
                                      createdDate,
                                  }: PostItemProps) {
     const [modalVisible, setModalVisible] = useState(false);
-    const [isScrollable, setIsScrollable] = useState(false);
 
     const openModal = () => setModalVisible(true);
     const closeModal = () => setModalVisible(false);
@@ -70,13 +69,6 @@ export default function PostItem({
         if (facebookPostUrl) {
             Linking.openURL(facebookPostUrl);
         }
-    };
-
-    /**
-     * Checks if content exceeds maximum height for scrolling
-     */
-    const handleContentSizeChange = (contentWidth: number, contentHeight: number) => {
-        setIsScrollable(contentHeight > 250);
     };
 
     /**
@@ -99,13 +91,13 @@ export default function PostItem({
                             source={{ uri: videoUrl }}
                             style={styles.media}
                             useNativeControls
-                            resizeMode={ResizeMode.CONTAIN}
+                            resizeMode={ResizeMode.COVER}
                             isLooping
                         />
                     ) : imageUrl ? (
-                        <Image source={{ uri: imageUrl }} style={styles.media}/>
+                        <Image source={{ uri: imageUrl }} style={styles.media} resizeMode="cover" />
                     ) : (
-                        <Image source={require('@/assets/images/icon.png')} style={styles.media}/>
+                        <Image source={require('@/assets/images/icon.png')} style={styles.media} />
                     )}
                     <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.mediaOverlay}/>
                 </View>
@@ -136,78 +128,65 @@ export default function PostItem({
                 propagateSwipe={true}
             >
                 <ThemedView style={styles.modalContainer}>
-                    {/* Full-size media in modal */}
-                    {videoUrl ? (
-                        <Video
-                            source={{ uri: videoUrl }}
-                            style={styles.modalImage}
-                            useNativeControls
-                            resizeMode={ResizeMode.CONTAIN}
-                            isLooping
-                        />
-                    ) : imageUrl ? (
-                        <Image
-                            source={{ uri: imageUrl }}
-                            style={styles.modalImage}
-                            resizeMode="contain"
-                        />
-                    ) : (
-                        <Image
-                            source={require('@/assets/images/icon.png')}
-                            style={styles.modalImage}
-                            resizeMode="contain"
-                        />
-                    )}
+                    <ScrollView
+                        style={styles.modalScrollView}
+                        contentContainerStyle={styles.modalScrollContent}
+                        showsVerticalScrollIndicator={true}
+                        bounces={true}
+                    >
+                        {/* Full-size media in modal */}
+                        {videoUrl ? (
+                            <Video
+                                source={{ uri: videoUrl }}
+                                style={styles.modalImage}
+                                useNativeControls
+                                resizeMode={ResizeMode.COVER}
+                                isLooping
+                            />
+                        ) : imageUrl ? (
+                            <Image
+                                source={{ uri: imageUrl }}
+                                style={styles.modalImage}
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <Image
+                                source={require('@/assets/images/icon.png')}
+                                style={styles.modalImage}
+                                resizeMode="contain"
+                            />
+                        )}
 
-                    {/* Modal content with full description, date and buttons */}
-                    <View style={styles.infoContainer}>
-                        <View style={styles.scrollContainer}>
-                            <ScrollView
-                                style={styles.descriptionScrollView}
-                                showsVerticalScrollIndicator={isScrollable}
-                                persistentScrollbar={isScrollable}
-                                indicatorStyle="black"
-                                contentContainerStyle={styles.scrollContentContainer}
-                                onContentSizeChange={handleContentSizeChange}
-                                scrollEnabled={isScrollable}
-                            >
+                        {/* Modal content with full description, date and buttons */}
+                        <View style={styles.modalContentContainer}>
+                            {facebookPostUrl && (
+                                <View style={styles.topContainer}>
+                                    <ThemedText style={styles.modalDate}>📅 {dateText}</ThemedText>
 
-                                {facebookPostUrl && (
-                                    <View style={styles.topContainer}>
-                                        <ThemedText style={styles.modalDate}>📅 {dateText}</ThemedText>
-
-                                        <TouchableOpacity
-                                            style={styles.modalFacebookButton}
-                                            onPress={openFacebookPost}
-                                            activeOpacity={0.7}
-                                        >
-                                            <View style={styles.facebookButtonContent}>
-                                                <View style={styles.facebookIconCircle}>
-                                                    <ThemedText style={styles.facebookIcon}>f</ThemedText>
-                                                </View>
-                                                <ThemedText style={styles.modalFacebookButtonText}>
-                                                    Zobacz na Facebooku
-                                                </ThemedText>
+                                    <TouchableOpacity
+                                        style={styles.modalFacebookButton}
+                                        onPress={openFacebookPost}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View style={styles.facebookButtonContent}>
+                                            <View style={styles.facebookIconCircle}>
+                                                <ThemedText style={styles.facebookIcon}>f</ThemedText>
                                             </View>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-
-                                <ThemedText style={styles.modalDescription}>{description}</ThemedText>
-                            </ScrollView>
-                            {isScrollable && (
-                                <LinearGradient
-                                    colors={['transparent', 'rgba(0,0,0,0.01)']}
-                                    style={styles.scrollIndicator}
-                                    pointerEvents="none"
-                                />
+                                            <ThemedText style={styles.modalFacebookButtonText}>
+                                                Zobacz na Facebooku
+                                            </ThemedText>
+                                        </View>
+                                    </TouchableOpacity>
+                                </View>
                             )}
-                        </View>
 
-                        <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
-                            <ThemedText style={styles.closeButtonText}>Zamknij</ThemedText>
-                        </TouchableOpacity>
-                    </View>
+                            <ThemedText style={styles.modalDescription}>{description}</ThemedText>
+                        </View>
+                    </ScrollView>
+
+                    <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
+                        <ThemedText style={styles.closeButtonText}>Zamknij</ThemedText>
+                    </TouchableOpacity>
                 </ThemedView>
             </Modal>
         </>
@@ -272,7 +251,7 @@ const styles = StyleSheet.create({
     },
     media: {
         width: '100%',
-        aspectRatio: 10 / 9,
+        aspectRatio: 9 / 11,
     },
     mediaOverlay: {
         position: 'absolute',
@@ -331,42 +310,26 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-end',
+    },
+    modalScrollView: {
+        flex: 1,
+        width: '100%',
+    },
+    modalScrollContent: {
+        flexGrow: 1,
+        paddingBottom: 20,
     },
     modalImage: {
-        width: '100%',
-        borderRadius: 20,
-        aspectRatio: 1,
-        marginTop: 5
+        alignSelf: 'center',
+        borderRadius: 10,
+        width: '90%',
+        aspectRatio: 9 / 14,
     },
-    infoContainer: {
-        paddingVertical: 5,
+    modalContentContainer: {
         paddingHorizontal: 20,
+        paddingVertical: 15,
         width: '100%',
-        alignItems: 'center'
-    },
-    scrollContainer: {
-        width: '100%',
-        height: 250,
-        maxHeight: 250,
-        position: 'relative',
-        marginBottom: 16,
-    },
-    descriptionScrollView: {
-        width: '100%',
-        paddingRight: 10,
-    },
-    scrollContentContainer: {
-        paddingBottom: 10,
-    },
-    scrollIndicator: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 30,
-        pointerEvents: 'none',
     },
     topContainer: {
         flexDirection: 'row',
@@ -377,10 +340,11 @@ const styles = StyleSheet.create({
     modalDescription: {
         fontSize: 16,
         lineHeight: 24,
-        color: '#4A5568'
+        color: '#4A5568',
+        marginBottom: 60
     },
     modalDate: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#718096',
         fontWeight: '500',
         marginBottom: 10
@@ -426,10 +390,18 @@ const styles = StyleSheet.create({
         letterSpacing: 0.2,
     },
     closeButton: {
-        paddingVertical: 10,
-        paddingHorizontal: 50,
-        borderRadius: 20,
-        backgroundColor: '#ffb300'
+        position: 'absolute',
+        bottom: 30,
+        alignSelf: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 60,
+        borderRadius: 25,
+        backgroundColor: '#ffb300',
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 4},
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
     },
     closeButtonText: {
         color: '#FFFFFF',
