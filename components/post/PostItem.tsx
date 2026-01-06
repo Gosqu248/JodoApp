@@ -93,15 +93,8 @@ export default function PostItem({
         <>
             <ThemedView style={styles.container}>
                 {/* Image or Video */}
-                {imageUrl && (
-                    <View style={styles.mediaContainer}>
-                        <Image source={{ uri: imageUrl }} style={styles.media}/>
-                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.mediaOverlay}/>
-                    </View>
-                )}
-
-                {videoUrl && (
-                    <View style={styles.mediaContainer}>
+                <View style={styles.mediaContainer}>
+                    {videoUrl ? (
                         <Video
                             source={{ uri: videoUrl }}
                             style={styles.media}
@@ -109,9 +102,13 @@ export default function PostItem({
                             resizeMode={ResizeMode.CONTAIN}
                             isLooping
                         />
-                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.mediaOverlay}/>
-                    </View>
-                )}
+                    ) : imageUrl ? (
+                        <Image source={{ uri: imageUrl }} style={styles.media}/>
+                    ) : (
+                        <Image source={require('@/assets/images/icon.png')} style={styles.media}/>
+                    )}
+                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.mediaOverlay}/>
+                </View>
 
                 {/* Main content with description and read more button */}
                 <TouchableOpacity style={styles.contentContainer} onPress={openModal}>
@@ -140,21 +137,25 @@ export default function PostItem({
             >
                 <ThemedView style={styles.modalContainer}>
                     {/* Full-size media in modal */}
-                    {imageUrl && (
-                        <Image
-                            source={{ uri: imageUrl }}
-                            style={styles.modalImage}
-                            resizeMode="contain"
-                        />
-                    )}
-
-                    {videoUrl && (
+                    {videoUrl ? (
                         <Video
                             source={{ uri: videoUrl }}
                             style={styles.modalImage}
                             useNativeControls
                             resizeMode={ResizeMode.CONTAIN}
                             isLooping
+                        />
+                    ) : imageUrl ? (
+                        <Image
+                            source={{ uri: imageUrl }}
+                            style={styles.modalImage}
+                            resizeMode="contain"
+                        />
+                    ) : (
+                        <Image
+                            source={require('@/assets/images/icon.png')}
+                            style={styles.modalImage}
+                            resizeMode="contain"
                         />
                     )}
 
@@ -347,6 +348,7 @@ const styles = StyleSheet.create({
     },
     scrollContainer: {
         width: '100%',
+        height: 250,
         maxHeight: 250,
         position: 'relative',
         marginBottom: 16,
@@ -370,6 +372,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        marginBottom: 10,
     },
     modalDescription: {
         fontSize: 16,
