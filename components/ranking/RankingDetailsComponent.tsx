@@ -2,6 +2,7 @@ import {ActivityIndicator, ColorValue, ScrollView, StyleSheet, Text, View} from 
 import React, { useCallback } from 'react'
 import { Exercise } from "@/types/Exercise";
 import { RankingEntry } from '@/types/RankingEntry';
+import { Gender } from '@/types/Gender';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDate } from '@/utils/formatters';
@@ -161,12 +162,38 @@ export function RankingDetailsComponent({ exercise, entries, loading, getExercis
 
                                     {/* User information */}
                                     <View style={styles.userInfo}>
-                                        <Text style={[
-                                            styles.username,
-                                            index < 3 && styles.podiumUsername
-                                        ]}>
-                                            {entry.username}
-                                        </Text>
+                                        <View style={styles.usernameRow}>
+                                            <Text style={[
+                                                styles.username,
+                                                index < 3 && styles.podiumUsername
+                                            ]}>
+                                                {entry.username}
+                                            </Text>
+                                            <Text style={[
+                                                styles.genderIcon,
+                                                index < 3 && styles.podiumUsername
+                                            ]}>
+                                                {entry.gender === Gender.MALE ? ' ♂' : ' ♀'}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.userDetails}>
+                                            {entry.bodyWeight && (
+                                                <Text style={[
+                                                    styles.userDetailText,
+                                                    index < 3 && styles.podiumDate
+                                                ]}>
+                                                    Waga: {entry.bodyWeight} kg
+                                                </Text>
+                                            )}
+                                            {entry.scorePercent && (
+                                                <Text style={[
+                                                    styles.userDetailText,
+                                                    index < 3 && styles.podiumDate
+                                                ]}>
+                                                    • {entry.scorePercent}% mc
+                                                </Text>
+                                            )}
+                                        </View>
                                         <Text style={[
                                             styles.resultDate,
                                             index < 3 && styles.podiumDate
@@ -384,17 +411,36 @@ const styles = StyleSheet.create({
     userInfo: {
         flex: 1
     },
+    usernameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4
+    },
     username: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#1f2937',
-        marginBottom: 4
+        color: '#1f2937'
+    },
+    genderIcon: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1f2937'
     },
     podiumUsername: {
         color: '#ffffff'
     },
+    userDetails: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+        gap: 8
+    },
+    userDetailText: {
+        fontSize: 12,
+        color: '#6b7280'
+    },
     resultDate: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#6b7280'
     },
     podiumDate: {

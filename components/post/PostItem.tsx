@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
     Image,
     StyleSheet,
@@ -58,9 +58,33 @@ export default function PostItem({
                                      createdDate,
                                  }: PostItemProps) {
     const [modalVisible, setModalVisible] = useState(false);
+    const [imageAspectRatio, setImageAspectRatio] = useState<number>(9 / 11); // Default for portrait
 
     const openModal = () => setModalVisible(true);
     const closeModal = () => setModalVisible(false);
+
+    /**
+     * Calculate image aspect ratio when imageUrl changes
+     * Detects if image is portrait (9:16) or landscape (16:9) and adjusts accordingly
+     */
+    useEffect(() => {
+        if (imageUrl) {
+            Image.getSize(
+                imageUrl,
+                (width, height) => {
+                    const ratio = width / height;
+                    // If landscape (width > height), use landscape aspect ratio
+                    // If portrait (height > width), use portrait aspect ratio
+                    setImageAspectRatio(ratio);
+                },
+                (error) => {
+                    console.log('Error getting image size:', error);
+                    // Fallback to default portrait aspect ratio
+                    setImageAspectRatio(9 / 11);
+                }
+            );
+        }
+    }, [imageUrl]);
 
     /**
      * Opens the original Facebook post in browser or Facebook app
@@ -89,15 +113,19 @@ export default function PostItem({
                     {videoUrl ? (
                         <Video
                             source={{ uri: videoUrl }}
-                            style={styles.media}
+                            style={[styles.media, { aspectRatio: 9 / 11 }]}
                             useNativeControls
                             resizeMode={ResizeMode.COVER}
                             isLooping
                         />
                     ) : imageUrl ? (
-                        <Image source={{ uri: imageUrl }} style={styles.media} resizeMode="cover" />
+                        <Image
+                            source={{ uri: imageUrl }}
+                            style={[styles.media, { aspectRatio: imageAspectRatio }]}
+                            resizeMode="cover"
+                        />
                     ) : (
-                        <Image source={require('@/assets/images/icon.png')} style={styles.media} />
+                        <Image source={require('@/assets/images/icon.png')} style={[styles.media, { aspectRatio: 9 / 11 }]} />
                     )}
                     <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.mediaOverlay}/>
                 </View>
@@ -138,7 +166,7 @@ export default function PostItem({
                         {videoUrl ? (
                             <Video
                                 source={{ uri: videoUrl }}
-                                style={styles.modalImage}
+                                style={[styles.modalImage, { aspectRatio: 9 / 14 }]}
                                 useNativeControls
                                 resizeMode={ResizeMode.COVER}
                                 isLooping
@@ -146,13 +174,13 @@ export default function PostItem({
                         ) : imageUrl ? (
                             <Image
                                 source={{ uri: imageUrl }}
-                                style={styles.modalImage}
+                                style={[styles.modalImage, { aspectRatio: imageAspectRatio }]}
                                 resizeMode="cover"
                             />
                         ) : (
                             <Image
                                 source={require('@/assets/images/icon.png')}
-                                style={styles.modalImage}
+                                style={[styles.modalImage, { aspectRatio: 9 / 14 }]}
                                 resizeMode="contain"
                             />
                         )}
@@ -251,7 +279,7 @@ const styles = StyleSheet.create({
     },
     media: {
         width: '100%',
-        aspectRatio: 9 / 11,
+        // aspectRatio is set dynamically based on image dimensions
     },
     mediaOverlay: {
         position: 'absolute',
@@ -324,7 +352,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         borderRadius: 10,
         width: '90%',
-        aspectRatio: 9 / 14,
+        // aspectRatio is set dynamically based on image dimensions
     },
     modalContentContainer: {
         paddingHorizontal: 20,
