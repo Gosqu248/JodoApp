@@ -436,15 +436,18 @@ const styles = StyleSheet.create({
         gap: 8
     },
     userDetailText: {
-        fontSize: 12,
-        color: '#6b7280'
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#374151'
     },
     resultDate: {
-        fontSize: 12,
-        color: '#6b7280'
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#4b5563'
     },
     podiumDate: {
-        color: 'rgba(255,255,255,0.8)'
+        color: 'rgba(255,255,255,0.95)',
+        fontWeight: '600'
     },
     resultContainer: {
         alignItems: 'flex-end'
