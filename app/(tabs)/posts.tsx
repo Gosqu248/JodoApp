@@ -54,9 +54,15 @@ export default function PostsScreen() {
             });
 
             // Update posts state - replace for first page, append for subsequent pages
-            setPosts(prev =>
-                pageToLoad === 0 ? data.content : [...prev, ...data.content]
-            );
+            // Deduplicate by ID to prevent duplicate key errors when pagination overlaps
+            setPosts(prev => {
+                if (pageToLoad === 0) {
+                    return data.content;
+                }
+                const existingIds = new Set(prev.map(p => p.id));
+                const newPosts = data.content.filter(p => !existingIds.has(p.id));
+                return [...prev, ...newPosts];
+            });
             setPage(data.pageNumber);
             setTotalPages(data.totalPages);
         } catch (error) {
@@ -110,7 +116,6 @@ export default function PostsScreen() {
      */
     const renderItem = ({ item }: ListRenderItemInfo<Post>) => (
         <PostItem
-            key={item.id}
             id={item.id}
             description={item.content}
             imageUrl={item.imageUrl}
