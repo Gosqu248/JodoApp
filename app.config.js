@@ -4,7 +4,7 @@ export default {
     expo: {
         name: "JodoGym",
         slug: "JodoApp",
-        version: "1.0.0",
+        version: "1.3.0",
         orientation: "portrait",
         icon: "./assets/images/icon.png",
         scheme: "jodoapp",

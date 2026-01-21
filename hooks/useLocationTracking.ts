@@ -42,6 +42,7 @@ import { LocationRequest } from "@/types/LocationRequest";
 const LOCATION_UPDATE_INTERVAL = 180_000; // 3 minutes - battery-efficient interval
 const LOCATION_DISTANCE_INTERVAL = 15; // 15 meters - significant movement threshold
 const BACKGROUND_LOCATION_TASK = 'background-location-task';
+const MIN_UPDATE_INTERVAL = 90_000; // 90 seconds (1.5 min) minimum between ANY updates (prevents race conditions)
 
 // AsyncStorage keys for background task
 const USER_ID_KEY = 'tracking_user_id';
@@ -50,6 +51,7 @@ const LAST_SESSION_MINUTES_KEY = 'tracking_last_session_minutes';
 const LAST_UPDATE_TIME_KEY = 'tracking_last_update_time';
 const BG_PERMISSION_ALERT_SHOWN_KEY = 'bg_permission_alert_shown';
 const LOCATION_STATUS_KEY = 'tracking_location_status'; // New key for persisting status
+const UPDATE_IN_PROGRESS_KEY = 'tracking_update_in_progress'; // Mutex for preventing parallel requests
 
 const LOCATION_CONFIG = {
     accuracy: Location.Accuracy.High,
@@ -96,13 +98,25 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
             return;
         }
 
+        const now = Date.now();
+
+        // Check if another update is in progress (mutex)
+        const updateInProgress = await AsyncStorage.getItem(UPDATE_IN_PROGRESS_KEY);
+        if (updateInProgress) {
+            const inProgressTime = parseInt(updateInProgress, 10);
+            // If mutex is older than 30 seconds, it's stale (request likely failed without cleanup)
+            if (now - inProgressTime < 30_000) {
+                console.log('🔒 Background task: another update in progress, skipping');
+                return;
+            }
+        }
+
         // Check if enough time has passed since last update
         const lastUpdateTimeStr = await AsyncStorage.getItem(LAST_UPDATE_TIME_KEY);
         const lastUpdateTime = lastUpdateTimeStr ? parseInt(lastUpdateTimeStr, 10) : 0;
-        const now = Date.now();
 
-        if (now - lastUpdateTime < LOCATION_UPDATE_INTERVAL - 10000) { // 10s buffer
-            console.log('⏱️ Background task: too soon since last update');
+        if (now - lastUpdateTime < MIN_UPDATE_INTERVAL) {
+            console.log(`⏱️ Background task: too soon since last update (${Math.round((now - lastUpdateTime) / 1000)}s < ${MIN_UPDATE_INTERVAL / 1000}s)`);
             return;
         }
 
@@ -114,6 +128,9 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
             timeSinceLastUpdate: `${Math.round((now - lastUpdateTime) / 1000)}s`
         });
 
+        // Set mutex before sending request
+        await AsyncStorage.setItem(UPDATE_IN_PROGRESS_KEY, now.toString());
+
         // Send location to server
         const request: LocationRequest = {
             latitude: location.coords.latitude,
@@ -122,7 +139,13 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
         console.log('📤 Background: Sending request:', JSON.stringify(request));
 
-        const resp: LocationResponse = await updateLocation(userId, request);
+        let resp: LocationResponse;
+        try {
+            resp = await updateLocation(userId, request);
+        } finally {
+            // Always release mutex
+            await AsyncStorage.removeItem(UPDATE_IN_PROGRESS_KEY);
+        }
 
         console.log('✅ Background: Server response:', {
             isInGym: resp.isInGym,
@@ -237,8 +260,10 @@ export function useLocationTracking(
         loadPersistedStatus();
     }, []);
 
+    const isUpdatingRef = useRef<boolean>(false);
+
     /**
-     * Sends location update to server
+     * Sends location update to server with mutex protection
      */
     const sendLocationUpdate = useCallback(async (location?: Location.LocationObject, forceUpdate: boolean = false) => {
         if (!userId) {
@@ -246,15 +271,38 @@ export function useLocationTracking(
             return;
         }
 
-        const now = Date.now();
-        const timeSinceLastUpdate = now - lastLocationUpdate.current;
-
-        if (!forceUpdate && timeSinceLastUpdate < LOCATION_UPDATE_INTERVAL) {
-            console.log(`⏱️ sendLocationUpdate: Too soon for next update (${Math.round(timeSinceLastUpdate / 1000)}s since last)`);
+        // Local mutex to prevent concurrent foreground calls
+        if (isUpdatingRef.current) {
+            console.log('🔒 sendLocationUpdate: Already updating, skipping');
             return;
         }
 
+        const now = Date.now();
+        const timeSinceLastUpdate = now - lastLocationUpdate.current;
+
+        // Use MIN_UPDATE_INTERVAL for non-forced updates to sync with background task
+        const minInterval = forceUpdate ? MIN_UPDATE_INTERVAL : LOCATION_UPDATE_INTERVAL;
+        if (timeSinceLastUpdate < minInterval) {
+            console.log(`⏱️ sendLocationUpdate: Too soon for next update (${Math.round(timeSinceLastUpdate / 1000)}s < ${minInterval / 1000}s)`);
+            return;
+        }
+
+        // Check if background task is updating (cross-process mutex via AsyncStorage)
+        const bgUpdateInProgress = await AsyncStorage.getItem(UPDATE_IN_PROGRESS_KEY);
+        if (bgUpdateInProgress) {
+            const inProgressTime = parseInt(bgUpdateInProgress, 10);
+            if (now - inProgressTime < 30_000) {
+                console.log('🔒 sendLocationUpdate: Background update in progress, skipping');
+                return;
+            }
+        }
+
+        isUpdatingRef.current = true;
+
         try {
+            // Set mutex in AsyncStorage (for background task coordination)
+            await AsyncStorage.setItem(UPDATE_IN_PROGRESS_KEY, now.toString());
+
             const loc = location || await Location.getCurrentPositionAsync(LOCATION_CONFIG);
 
             const request: LocationRequest = {
@@ -322,19 +370,11 @@ export function useLocationTracking(
             }));
 
         } catch (e: any) {
-            console.error('❌ sendLocationUpdate error:', {
-                message: e.message,
-                status: e.response?.status,
-                statusText: e.response?.statusText,
-                data: e.response?.data,
-                config: {
-                    url: e.config?.url,
-                    method: e.config?.method,
-                    baseURL: e.config?.baseURL,
-                    headers: e.config?.headers,
-                },
-                stack: e.stack?.split('\n').slice(0, 3).join('\n')
-            });
+            console.error('❌ sendLocationUpdate error:', e.message);
+            console.error('❌ Status:', e.response?.status, e.response?.statusText);
+            console.error('❌ Response data:', JSON.stringify(e.response?.data));
+            console.error('❌ Request URL:', e.config?.baseURL, e.config?.url);
+            console.error('❌ Request body:', JSON.stringify(e.config?.data));
 
             // Log specific error types
             if (e.response?.status === 401 || e.response?.status === 403) {
@@ -348,6 +388,10 @@ export function useLocationTracking(
             } else if (e.message?.includes('Network')) {
                 console.error('📡 Foreground: Network error - check internet connection');
             }
+        } finally {
+            // Always release mutex
+            isUpdatingRef.current = false;
+            await AsyncStorage.removeItem(UPDATE_IN_PROGRESS_KEY);
         }
     }, [userId, onLocationUpdate]);
 

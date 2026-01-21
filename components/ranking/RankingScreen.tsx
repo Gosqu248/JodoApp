@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Exercise } from "@/types/Exercise";
 import { RankingEntry } from "@/types/RankingEntry";
+import { Gender } from "@/types/Gender";
+import { WeightCategory, WeightCategoryHelper } from "@/types/WeightCategory";
 import { getExercises } from "@/api/rankingEntry";
 import { getRankingEntries } from "@/api/exercise";
 import { RankingDetailsComponent } from "@/components/ranking/RankingDetailsComponent";
@@ -36,6 +38,10 @@ export default function RankingScreen() {
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     const [rankingEntries, setRankingEntries] = useState<RankingEntry[]>([]);
+
+    // Filter states
+    const [selectedGender, setSelectedGender] = useState<Gender | undefined>(undefined);
+    const [selectedWeightCategory, setSelectedWeightCategory] = useState<WeightCategory | undefined>(undefined);
 
     // Loading states
     const [loading, setLoading] = useState(true);
@@ -68,11 +74,17 @@ export default function RankingScreen() {
     /**
      * Fetch ranking entries for a specific exercise
      * @param exerciseId - ID of the exercise to get rankings for
+     * @param gender - Optional gender filter
+     * @param weightCategory - Optional weight category filter
      */
-    const fetchRankingEntries = useCallback(async (exerciseId: string) => {
+    const fetchRankingEntries = useCallback(async (
+        exerciseId: string,
+        gender?: Gender,
+        weightCategory?: WeightCategory
+    ) => {
         try {
             setRankingLoading(true);
-            const rankingData = await getRankingEntries(exerciseId);
+            const rankingData = await getRankingEntries(exerciseId, gender, weightCategory);
             setRankingEntries(rankingData);
         } catch {
             Alert.alert('Błąd', 'Wystąpił błąd podczas pobierania rankingu');
@@ -88,8 +100,19 @@ export default function RankingScreen() {
      */
     const handleExercisePress = useCallback((exercise: Exercise) => {
         setSelectedExercise(exercise);
+        setSelectedGender(undefined);
+        setSelectedWeightCategory(undefined);
         fetchRankingEntries(exercise.id);
     }, [fetchRankingEntries]);
+
+    /**
+     * Handle filter change and refresh ranking
+     */
+    const handleFilterChange = useCallback((gender?: Gender, weightCategory?: WeightCategory) => {
+        if (selectedExercise) {
+            fetchRankingEntries(selectedExercise.id, gender, weightCategory);
+        }
+    }, [selectedExercise, fetchRankingEntries]);
 
     /**
      * Get appropriate icon for exercise, with fallback
@@ -236,6 +259,122 @@ export default function RankingScreen() {
                             <Ionicons name="arrow-back" size={24} color="#6366f1" />
                             <Text style={styles.backButtonText}>Powrót do kategorii</Text>
                         </TouchableOpacity>
+                    </View>
+
+                    {/* Filters container */}
+                    <View style={styles.filtersContainer}>
+                        {/* Gender filter */}
+                        <View style={styles.filterSection}>
+                            <Text style={styles.filterLabel}>Płeć:</Text>
+                            <View style={styles.filterButtons}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.filterButton,
+                                        !selectedGender && styles.filterButtonActive
+                                    ]}
+                                    onPress={() => {
+                                        setSelectedGender(undefined);
+                                        handleFilterChange(undefined, selectedWeightCategory);
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[
+                                        styles.filterButtonText,
+                                        !selectedGender && styles.filterButtonTextActive
+                                    ]}>
+                                        Wszystkie
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.filterButton,
+                                        selectedGender === Gender.MALE && styles.filterButtonActive
+                                    ]}
+                                    onPress={() => {
+                                        setSelectedGender(Gender.MALE);
+                                        handleFilterChange(Gender.MALE, selectedWeightCategory);
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[
+                                        styles.filterButtonText,
+                                        selectedGender === Gender.MALE && styles.filterButtonTextActive
+                                    ]}>
+                                        ♂ Mężczyźni
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.filterButton,
+                                        selectedGender === Gender.FEMALE && styles.filterButtonActive
+                                    ]}
+                                    onPress={() => {
+                                        setSelectedGender(Gender.FEMALE);
+                                        handleFilterChange(Gender.FEMALE, selectedWeightCategory);
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[
+                                        styles.filterButtonText,
+                                        selectedGender === Gender.FEMALE && styles.filterButtonTextActive
+                                    ]}>
+                                        ♀ Kobiety
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Weight category filter */}
+                        <View style={[styles.filterSection, { marginBottom: 0 }]}>
+                            <Text style={styles.filterLabel}>Kategoria wagowa:</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.filterScrollContent}
+                            >
+                                <TouchableOpacity
+                                    style={[
+                                        styles.filterButton,
+                                        styles.filterButtonSmall,
+                                        !selectedWeightCategory && styles.filterButtonActive
+                                    ]}
+                                    onPress={() => {
+                                        setSelectedWeightCategory(undefined);
+                                        handleFilterChange(selectedGender, undefined);
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={[
+                                        styles.filterButtonText,
+                                        !selectedWeightCategory && styles.filterButtonTextActive
+                                    ]}>
+                                        Wszystkie
+                                    </Text>
+                                </TouchableOpacity>
+                                {WeightCategoryHelper.getAllCategories().map((category) => (
+                                    <TouchableOpacity
+                                        key={category}
+                                        style={[
+                                            styles.filterButton,
+                                            styles.filterButtonSmall,
+                                            selectedWeightCategory === category && styles.filterButtonActive
+                                        ]}
+                                        onPress={() => {
+                                            setSelectedWeightCategory(category);
+                                            handleFilterChange(selectedGender, category);
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={[
+                                            styles.filterButtonText,
+                                            selectedWeightCategory === category && styles.filterButtonTextActive
+                                        ]}>
+                                            {WeightCategoryHelper.getLabel(category)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
                     </View>
 
                     {/* Ranking details component */}
@@ -405,5 +544,60 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '500',
         color: '#6366f1'
+    },
+    filtersContainer: {
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        backgroundColor: '#ffffff',
+        marginHorizontal: 20,
+        marginBottom: 16,
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 3,
+        borderWidth: 1,
+        borderColor: '#f1f5f9'
+    },
+    filterSection: {
+        marginBottom: 16
+    },
+    filterLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1f2937',
+        marginBottom: 8
+    },
+    filterButtons: {
+        flexDirection: 'row',
+        gap: 8
+    },
+    filterScrollContent: {
+        gap: 8
+    },
+    filterButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        backgroundColor: '#f3f4f6',
+        borderWidth: 1,
+        borderColor: '#e5e7eb'
+    },
+    filterButtonSmall: {
+        paddingVertical: 6,
+        paddingHorizontal: 12
+    },
+    filterButtonActive: {
+        backgroundColor: '#6366f1',
+        borderColor: '#6366f1'
+    },
+    filterButtonText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#374151'
+    },
+    filterButtonTextActive: {
+        color: '#ffffff'
     }
 });
