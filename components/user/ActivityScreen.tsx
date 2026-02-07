@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     StyleSheet,
     Text,
@@ -36,6 +36,38 @@ export default function ActivityScreen() {
 
     const { forceUpdate } = useLocationTracking(user?.id || null, setLocationStatus);
     const { startTime, currentSessionMinutes } = sessionDetails;
+    const [liveMinutes, setLiveMinutes] = useState<number>(0);
+
+    // Calculate live session duration based on startTime from backend
+    // This ensures accurate time display after returning from background
+    useEffect(() => {
+        if (!isInGym || !startTime) {
+            setLiveMinutes(0);
+            return;
+        }
+
+        const calculateMinutes = () => {
+            const start = new Date(startTime).getTime();
+            const now = Date.now();
+            const diffMinutes = Math.floor((now - start) / 60000);
+            setLiveMinutes(diffMinutes);
+        };
+
+        // Calculate immediately
+        calculateMinutes();
+
+        // Update every 30 seconds for live display
+        const interval = setInterval(calculateMinutes, 30000);
+
+        return () => clearInterval(interval);
+    }, [isInGym, startTime]);
+
+    // Use live calculated minutes, fallback to backend value
+    const displayMinutes = useMemo(() => {
+        if (!isInGym) return 0;
+        // Use the larger of liveMinutes or currentSessionMinutes for accuracy
+        return Math.max(liveMinutes, currentSessionMinutes ?? 0);
+    }, [isInGym, liveMinutes, currentSessionMinutes]);
 
     // Debug logging for location tracking state
     useEffect(() => {
@@ -43,10 +75,12 @@ export default function ActivityScreen() {
             isInGym,
             startTime,
             currentSessionMinutes,
+            liveMinutes,
+            displayMinutes,
             hasSessionDetails: !!sessionDetails,
             userId: user?.id
         });
-    }, [isInGym, startTime, currentSessionMinutes, sessionDetails, user?.id]);
+    }, [isInGym, startTime, currentSessionMinutes, liveMinutes, displayMinutes, sessionDetails, user?.id]);
 
     const fetchStats = useCallback(async (page: number = 0, reset: boolean = false) => {
         if (!user?.id) return;
@@ -197,26 +231,6 @@ export default function ActivityScreen() {
         return 'Ten miesiąc';
     };
 
-    // Get activity status information for current session
-    const getActivityStatusInfo = () => {
-        console.log('🔍 getActivityStatusInfo called, isInGym:', isInGym);
-
-        if (!isInGym) {
-            console.log('⚠️ Not in gym, returning null');
-            return null;
-        }
-
-        console.log('✅ In gym, returning status info');
-        return {
-            title: 'Trening w toku',
-            icon: 'fitness' as const,
-            color: '#4CAF50',
-            statusText: 'W siłowni',
-            statusColor: '#4CAF50',
-            statusIcon: 'location' as const
-        };
-    };
-
     // Show loading spinner while initial data is loading
     if (loading) {
         return (
@@ -226,13 +240,9 @@ export default function ActivityScreen() {
         );
     }
 
-    const statusInfo = getActivityStatusInfo();
-
     console.log('🎨 Render state:', {
         isInGym,
-        statusInfo: !!statusInfo,
-        willShowCard: !!(isInGym && statusInfo),
-        currentSessionMinutes,
+        displayMinutes,
         startTime
     });
 
@@ -249,58 +259,59 @@ export default function ActivityScreen() {
                     />
                 }
             >
+                {/* Gym status indicator - always visible */}
+                <View style={[
+                    styles.gymStatusCard,
+                    isInGym ? styles.gymStatusCardActive : styles.gymStatusCardInactive
+                ]}>
+                    <View style={styles.gymStatusRow}>
+                        <Ionicons
+                            name={isInGym ? 'location' : 'location-outline'}
+                            size={24}
+                            color={isInGym ? '#4CAF50' : '#999'}
+                        />
+                        <Text style={[
+                            styles.gymStatusLabel,
+                            isInGym ? styles.gymStatusLabelActive : styles.gymStatusLabelInactive
+                        ]}>
+                            Jesteś na siłowni:
+                        </Text>
+                        <View style={[
+                            styles.gymStatusBadge,
+                            isInGym ? styles.gymStatusBadgeActive : styles.gymStatusBadgeInactive
+                        ]}>
+                            <Text style={[
+                                styles.gymStatusBadgeText,
+                                isInGym ? styles.gymStatusBadgeTextActive : styles.gymStatusBadgeTextInactive
+                            ]}>
+                                {isInGym ? 'TAK' : 'NIE'}
+                            </Text>
+                        </View>
+                    </View>
+                    {isInGym && startTime && (
+                        <View style={styles.gymStatusDetails}>
+                            <Text style={styles.gymStatusTime}>
+                                Czas treningu: {formatActivityDuration(displayMinutes)}
+                            </Text>
+                            <Text style={styles.gymStatusStartTime}>
+                                Start: {new Date(startTime).toLocaleTimeString('pl-PL', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
                 {/* Current gym occupancy display */}
                 <View style={styles.activityButton}>
-                    <Ionicons name="fitness-outline" size={24} color="#000" />
-                    <Text style={styles.activityButtonText}>Ilość osób na siłowni: {onGymCount}</Text>
+                    <Ionicons name="people-outline" size={24} color="#000" />
+                    <Text style={styles.activityButtonText}>Osób na siłowni: {onGymCount}</Text>
                 </View>
 
                 <View style={styles.header}>
                     <Text style={styles.title}>Moja aktywność</Text>
                 </View>
-
-                {/* Current activity card - only shown when user has active session */}
-                {isInGym && statusInfo && (
-                    <View style={[
-                        styles.currentActivityCard,
-                        { borderColor: statusInfo.color }
-                    ]}>
-                        <View style={styles.currentActivityHeader}>
-                            <Ionicons name={statusInfo.icon} size={24} color={statusInfo.color} />
-                            <Text style={[
-                                styles.currentActivityTitle,
-                                { color: statusInfo.color }
-                            ]}>
-                                {statusInfo.title}
-                            </Text>
-                        </View>
-                        <View style={styles.currentActivityTime}>
-                            <Text style={styles.currentActivityDuration}>
-                                {formatActivityDuration(currentSessionMinutes ?? 0)}
-                            </Text>
-                            <Text style={styles.currentActivityLabel}>
-                                Rozpoczęto:{' '}
-                                {startTime ? new Date(startTime).toLocaleTimeString('pl-PL', {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                }) : '...'}
-                            </Text>
-                        </View>
-                        <View style={styles.locationStatus}>
-                            <Ionicons
-                                name={statusInfo.statusIcon}
-                                size={16}
-                                color={statusInfo.statusColor}
-                            />
-                            <Text style={[
-                                styles.locationText,
-                                { color: statusInfo.statusColor }
-                            ]}>
-                                {statusInfo.statusText}
-                            </Text>
-                        </View>
-                    </View>
-                )}
 
                 {/* Period selector tabs */}
                 <View style={styles.periodSelector}>
@@ -453,6 +464,77 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', paddingBottom: Platform.OS === 'android' ? 25 : 0},
     scrollContainer: { padding: 20, paddingBottom: 80 },
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+    // Gym status card - always visible
+    gymStatusCard: {
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 2,
+    },
+    gymStatusCardActive: {
+        backgroundColor: '#E8F5E9',
+        borderColor: '#4CAF50',
+    },
+    gymStatusCardInactive: {
+        backgroundColor: '#f8f9fa',
+        borderColor: '#e0e0e0',
+    },
+    gymStatusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    gymStatusLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 10,
+        flex: 1,
+    },
+    gymStatusLabelActive: {
+        color: '#2E7D32',
+    },
+    gymStatusLabelInactive: {
+        color: '#666',
+    },
+    gymStatusBadge: {
+        paddingHorizontal: 16,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    gymStatusBadgeActive: {
+        backgroundColor: '#4CAF50',
+    },
+    gymStatusBadgeInactive: {
+        backgroundColor: '#e0e0e0',
+    },
+    gymStatusBadgeText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    gymStatusBadgeTextActive: {
+        color: '#fff',
+    },
+    gymStatusBadgeTextInactive: {
+        color: '#666',
+    },
+    gymStatusDetails: {
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#C8E6C9',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    gymStatusTime: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+    },
+    gymStatusStartTime: {
+        fontSize: 14,
+        color: '#4CAF50',
+    },
+
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -465,8 +547,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#fff',
         borderRadius: 16,
-        padding: 20,
-        marginBottom: 30,
+        padding: 16,
+        marginBottom: 20,
         borderWidth: 2,
         borderColor: '#ffc500',
         shadowColor: '#000',
@@ -476,43 +558,12 @@ const styles = StyleSheet.create({
         elevation: 3
     },
     activityButtonText: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
         color: '#000',
         marginLeft: 12,
         flex: 1
     },
-    currentActivityCard: {
-        backgroundColor: '#f8f9fa',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
-        borderWidth: 2,
-        borderColor: '#4CAF50'
-    },
-    currentActivityHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 10
-    },
-    currentActivityTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#4CAF50',
-        marginLeft: 8
-    },
-    currentActivityTime: { alignItems: 'center' },
-    currentActivityDuration: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#000'
-    },
-    currentActivityLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 4
-    },
-
     periodSelector: {
         flexDirection: 'row',
         backgroundColor: '#f8f9fa',
@@ -615,13 +666,4 @@ const styles = StyleSheet.create({
     noDataContainer: { alignItems: 'center', paddingVertical: 40 },
     noDataText: { fontSize: 16, color: '#666', marginTop: 12 },
     noDataSubText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 4 },
-    locationStatus: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 10
-    },
-    locationText: {
-        fontSize: 14,
-        marginLeft: 6
-    }
 });
