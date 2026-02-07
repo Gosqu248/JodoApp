@@ -63,7 +63,7 @@ export default {
                 "expo-location",
                 {
                     locationWhenInUsePermission: "JodoGym potrzebuje dostępu do Twojej lokalizacji podczas korzystania z aplikacji, aby automatycznie wykrywać, gdy znajdujesz się w pobliżu siłowni i śledzić czas treningu. Gdy wejdziesz do siłowni, aplikacja automatycznie rozpocznie liczenie czasu treningu.",
-                    isIosBackgroundLocationEnabled: true,
+                    isIosBackgroundLocationEnabled: false,
                     isAndroidBackgroundLocationEnabled: false,
                     isAndroidForegroundServiceEnabled: true
                 }
