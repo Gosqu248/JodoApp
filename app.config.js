@@ -4,7 +4,7 @@ export default {
     expo: {
         name: "JodoGym",
         slug: "JodoApp",
-        version: "1.3.0",
+        version: "2.0.0",
         orientation: "portrait",
         icon: "./assets/images/icon.png",
         scheme: "jodoapp",
@@ -19,11 +19,7 @@ export default {
                 NSPhotoLibraryUsageDescription:
                     "JodoGym potrzebuje dostępu do Twojej biblioteki zdjęć, aby umożliwić Ci wybranie zdjęcia profilowego. Na przykład: możesz wybrać istniejące zdjęcie z galerii i ustawić je jako zdjęcie profilowe w aplikacji, dzięki czemu trenerzy i inni członkowie siłowni będą mogli Cię łatwiej rozpoznać.",
                 NSLocationWhenInUseUsageDescription:
-                    "JodoGym potrzebuje dostępu do Twojej lokalizacji podczas korzystania z aplikacji, aby automatycznie wykrywać, gdy znajdujesz się w pobliżu siłowni. Na przykład: gdy otworzysz aplikację i jesteś w okolicy siłowni, aplikacja może automatycznie zarejestrować rozpoczęcie sesji treningowej i wyświetlić odpowiednie funkcje treningowe.",
-                NSLocationAlwaysAndWhenInUseUsageDescription:
-                    "JodoGym potrzebuje dostępu do Twojej lokalizacji także w tle, aby automatycznie wykrywać, gdy wchodzisz lub wychodzisz z obszaru siłowni, nawet gdy aplikacja nie jest aktywna. Na przykład: gdy wejdziesz do siłowni z aplikacją w tle, otrzymasz powiadomienie o rozpoczęciu treningu i automatycznie rozpocznie się licznik czasu treningu. Gdy wyjdziesz z siłowni, trening zostanie automatycznie zakończony i zapisany do Twojej historii aktywności. To pozwala na dokładne śledzenie czasu spędzonego na treningach bez konieczności ręcznego włączania i wyłączania aplikacji.",
-                NSLocationAlwaysUsageDescription:
-                    "JodoGym potrzebuje dostępu do Twojej lokalizacji także w tle, aby automatycznie wykrywać, gdy wchodzisz lub wychodzisz z obszaru siłowni, nawet gdy aplikacja jest zamknięta. Na przykład: gdy wejdziesz do siłowni, otrzymasz powiadomienie o rozpoczęciu treningu i automatycznie rozpocznie się licznik czasu. Gdy wyjdziesz z siłowni, trening zostanie automatycznie zakończony i zapisany, co pozwala na precyzyjne śledzenie wszystkich Twoich sesji treningowych bez konieczności pamiętania o ręcznym uruchamianiu aplikacji.",
+                    "JodoGym potrzebuje dostępu do Twojej lokalizacji podczas korzystania z aplikacji, aby automatycznie wykrywać, gdy znajdujesz się w pobliżu siłowni i śledzić czas treningu. Gdy wejdziesz do siłowni, aplikacja automatycznie rozpocznie liczenie czasu treningu i wyświetli powiadomienie o trwającej sesji.",
                 NSUserNotificationsUsageDescription:
                     "JodoGym potrzebuje dostępu do powiadomień, aby informować Cię o ważnych wydarzeniach treningowych. Na przykład: otrzymasz powiadomienie, gdy automatycznie rozpocznie się lub zakończy sesja treningowa po wejściu lub wyjściu z siłowni, gdy zbliża się termin zajęć grupowych, na które się zapisałeś, lub gdy Twój karnet wkrótce wygaśnie.",
                 UIBackgroundModes: [
@@ -49,8 +45,8 @@ export default {
             permissions: [
                 "ACCESS_FINE_LOCATION",
                 "ACCESS_COARSE_LOCATION",
-                "ACCESS_BACKGROUND_LOCATION",
                 "FOREGROUND_SERVICE",
+                "FOREGROUND_SERVICE_LOCATION",
                 "WAKE_LOCK",
                 "POST_NOTIFICATIONS"
             ],
@@ -66,10 +62,10 @@ export default {
             [
                 "expo-location",
                 {
-                    locationAlwaysAndWhenInUsePermission: "JodoGym potrzebuje dostępu do Twojej lokalizacji także w tle, aby automatycznie wykrywać, gdy wchodzisz lub wychodzisz z obszaru siłowni, nawet gdy aplikacja nie jest aktywna. Na przykład: gdy wejdziesz do siłowni z aplikacją w tle, otrzymasz powiadomienie o rozpoczęciu treningu i automatycznie rozpocznie się licznik czasu treningu. Gdy wyjdziesz z siłowni, trening zostanie automatycznie zakończony i zapisany do Twojej historii aktywności. To pozwala na dokładne śledzenie czasu spędzonego na treningach bez konieczności ręcznego włączania i wyłączania aplikacji.",
-                    locationWhenInUsePermission: "JodoGym potrzebuje dostępu do Twojej lokalizacji podczas korzystania z aplikacji, aby automatycznie wykrywać, gdy znajdujesz się w pobliżu siłowni. Na przykład: gdy otworzysz aplikację i jesteś w okolicy siłowni, aplikacja może automatycznie zarejestrować rozpoczęcie sesji treningowej i wyświetlić odpowiednie funkcje treningowe.",
-                    isIosBackgroundLocationEnabled: true,
-                    isAndroidBackgroundLocationEnabled: true
+                    locationWhenInUsePermission: "JodoGym potrzebuje dostępu do Twojej lokalizacji podczas korzystania z aplikacji, aby automatycznie wykrywać, gdy znajdujesz się w pobliżu siłowni i śledzić czas treningu. Gdy wejdziesz do siłowni, aplikacja automatycznie rozpocznie liczenie czasu treningu.",
+                    isIosBackgroundLocationEnabled: false,
+                    isAndroidBackgroundLocationEnabled: false,
+                    isAndroidForegroundServiceEnabled: true
                 }
             ],
             [
